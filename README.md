@@ -12,14 +12,48 @@ The latest package can be downloaded from: https://pypi.org/project/pylenm/
 
 More information on the project can be found here: https://altemis.lbl.gov/ai-for-soil-and-groundwater-contamination/ 
 
---
+
+## Installation
+
+### [Optional] Create a virtual environment where the package is installed.
+It is recommended to install the package and work in a virtual environment. </br>
+Read more [here](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) to learn how to install `conda`.
+```
+conda create --name pylenm_env python=3.8
+conda activate pylenm_env
+```
+
+### Install directly from the PyPI package repository.
+Install directly using `pip` as mentioned on the [PyPI page](https://pypi.org/project/pylenm/).
+```
+pip install pylenm
+```
+
+### Install from the source code
+1. **Clone the repository**
+    ```
+    git clone https://github.com/ALTEMIS-DOE/pylenm.git
+    cd pylenm
+    ```
+
+<!-- 2. **Install package dependencies**
+    ```
+    pip install -r requirements.txt
+    ``` -->
+
+2. **Install the package**
+    ```
+    pip install .
+    ```
+
+
 # Journal Publication:
 ## [PyLEnM: A Machine Learning Framework for Long-Term Groundwater Contamination Monitoring Strategies](https://pubs.acs.org/doi/full/10.1021/acs.est.1c07440)
 Aurelien O. Meray, Savannah Sturla, Masudur R. Siddiquee, Rebecca Serata, Sebastian Uhlemann, Hansell Gonzalez-Raymat, Miles Denham, Himanshu Upadhyay, Leonel E. Lagos, Carol Eddy-Dilek, and Haruko M. Wainwright
 Environmental Science & Technology 2022 56 (9), 5973-5983
 DOI: 10.1021/acs.est.1c07440
 
---
+
 
 # Demonstration notebooks:
 [1 – Basics](https://colab.research.google.com/github/ALTEMIS-DOE/pylenm/blob/master/notebooks/1%29%20pyLEnM%20-%20Basics.ipynb)<br>
@@ -28,12 +62,12 @@ DOI: 10.1021/acs.est.1c07440
 [4 – Tritium Spatial Estimation](https://colab.research.google.com/github/ALTEMIS-DOE/pylenm/blob/master/notebooks/4%29%20pyLEnM%20-%20Tritium%20Spatial%20Estimation.ipynb)<br>
 [5 – Proxy Estimation (SC~Tritium)](https://colab.research.google.com/github/ALTEMIS-DOE/pylenm/blob/master/notebooks/5%29%20pyLEnM%20-%20Proxy%20Estimation%20(SC~Tritium).ipynb)<br>
 
---
+
 
 # Demonstration data:
 The data used in the demonstration notebooks above can be downloaded [here]( https://github.com/ALTEMIS-DOE/pylenm/tree/master/notebooks/data).
 
---
+
 
 # Contributors:
 Aurelien Meray<br>
