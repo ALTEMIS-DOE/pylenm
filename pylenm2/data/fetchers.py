@@ -1,3 +1,21 @@
+import os
+import numpy as np
+import pandas as pd
+
+from pylenm2.data import filters
+from pylenm2.utils import constants as c
+
+import logging
+from pylenm2 import logger_config
+
+fetchers_logger = logger_config.setup_logging(
+    module_name=__name__,
+    # level=logging.INFO,
+    level=logging.DEBUG,
+    logfile_dir=c.LOGFILE_DIR,
+)
+
+
 def __get_individual_analyte_df(self, data, dates, analyte):
     sample = data[analyte]
     sample_analyte = pd.DataFrame(sample, index=dates, columns=sample.index)
@@ -109,10 +127,21 @@ def getJointData(self, analytes, lag=3):
     return finalData
 
 
-def get_analyte_details(self, analyte_name, filter=False, col=None, equals=[], save_to_file = False, save_dir='analyte_details'):
+def get_analyte_details(
+        data_pdf, 
+        analyte_name, 
+        filter=False, 
+        col=None, 
+        equals=[], 
+        save_to_file = False, 
+        save_dir='analyte_details',
+    ):
     """Returns a csv file saved to save_dir with details pertaining to the specified analyte. Details include the well names, the date ranges and the number of unique samples.
 
+    TODO: Handle error returns better!
+
     Args:
+        data_pdf (pylenm2.PylenmDataFactory): PylenmDataFactory object containing the construction data.
         analyte_name (str): name of the analyte to be processed
         filter (bool, optional): whether to filter the data. Defaults to False.
         col (str, optional): column to filter. Example: col='STATION_ID'. Defaults to None.
@@ -123,19 +152,26 @@ def get_analyte_details(self, analyte_name, filter=False, col=None, equals=[], s
     Returns:
         pd.DataFrame: Table with well information
     """
-    data = self.data
+    data = data_pdf.data
     data = data[data.ANALYTE_NAME == analyte_name].reset_index().drop('index', axis=1)
     data = data[~data.RESULT.isna()]
     data = data.drop(['ANALYTE_NAME', 'RESULT', 'RESULT_UNITS'], axis=1)
     data.COLLECTION_DATE = pd.to_datetime(data.COLLECTION_DATE)
     if(filter):
-        filter_res = self.filter_by_column(data=self.construction_data, col=col, equals=equals)
-        if('ERROR:' in str(filter_res)):
+        filter_res = filters.filter_by_column(
+            data=data_pdf.construction_data, 
+            col=col, 
+            equals=equals,
+        )
+        if('ERROR:' in str(filter_res)):    # TODO: Handle Error returns better
+            fetchers_logger.error("Ran into ERROR when calling filter_by_column()!")
             return filter_res
+        
         query_wells = list(data.STATION_ID.unique())
         filter_wells = list(filter_res.index.unique())
         intersect_wells = list(set(query_wells) & set(filter_wells))
         if(len(intersect_wells)<=0):
+            fetchers_logger.error('ERROR: No results for this query with the specifed filter parameters.')
             return 'ERROR: No results for this query with the specifed filter parameters.'
         data = data[data['STATION_ID'].isin(intersect_wells)]        
 
@@ -146,19 +182,24 @@ def get_analyte_details(self, analyte_name, filter=False, col=None, equals=[], s
         startDate = current.COLLECTION_DATE.min().date()
         endDate = current.COLLECTION_DATE.max().date()
         numSamples = current.duplicated().value_counts()[0]
-        info.append({'Well Name': well, 'Start Date': startDate, 'End Date': endDate,
-                        'Date Range (days)': endDate-startDate ,
-                        'Unique samples': numSamples})
-        details = pd.DataFrame(info)
-        details.index = details['Well Name']
-        details = details.drop('Well Name', axis=1)
-        details = details.sort_values(by=['Start Date', 'End Date'])
-        details['Date Range (days)'] = (details['Date Range (days)']/ np.timedelta64(1, 'D')).astype(int)
+        info.append({
+            'Well Name': well, 
+            'Start Date': startDate, 
+            'End Date': endDate,
+            'Date Range (days)': endDate-startDate ,
+            'Unique samples': numSamples,
+        })
+    details = pd.DataFrame(info)
+    details.index = details['Well Name']
+    details = details.drop('Well Name', axis=1)
+    details = details.sort_values(by=['Start Date', 'End Date'])
+    details['Date Range (days)'] = (details['Date Range (days)']/ np.timedelta64(1, 'D')).astype(int)
     if(save_to_file):
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
         details.to_csv(save_dir + '/' + analyte_name + '_details.csv')
     return details
+
 
 def get_data_summary(self, analytes=None, sort_by='date', ascending=False, filter=False, col=None, equals=[]):
     """Returns a dataframe with a summary of the data for certain analytes. Summary includes the date ranges and the number of unique samples and other statistics for the analyte results.
@@ -222,6 +263,7 @@ def get_data_summary(self, analytes=None, sort_by='date', ascending=False, filte
             details = details.sort_values(by=['# unique wells'], ascending=ascending)
 
     return details
+
 
 def get_well_analytes(self, well_name=None, filter=False, col=None, equals=[]):
     """Displays the analyte names available at given well locations.
