@@ -46,9 +46,9 @@ def simplify_data(
     # else:
     #     data = data
     if isinstance(data, pd.DataFrame):
-        data_df = data
+        data_df = data.copy(deep=True)
     elif isinstance(data, pylenm2.PylenmDataFactory):
-        data_df = data.data
+        data_df = data.data.copy(deep=True)
     else:
         filters_logger.error("`data` must be either a pandas DataFrame or PylenmDataFactory!")
         raise ValueError("`data` must be either a pandas DataFrame or PylenmDataFactory!")
@@ -70,7 +70,7 @@ def simplify_data(
             raise ValueError("Specified column(s) do not exist in the data!")
 
     data_df = data_df[sel_cols]
-    data_df.COLLECTION_DATE = pd.to_datetime(data_df.COLLECTION_DATE)
+    data_df.COLLECTION_DATE = pd.to_datetime(data_df.COLLECTION_DATE, format=c.COLLECTION_DATE_FORMAT)
     data_df = data_df.sort_values(by="COLLECTION_DATE")
     dup = data_df[data_df.duplicated(['COLLECTION_DATE', 'STATION_ID','ANALYTE_NAME', 'RESULT'])]
     data_df = data_df.drop(dup.index)
@@ -97,11 +97,13 @@ def simplify_data(
     return data_df
 
 
-def filter_by_column(self, data=None, col=None, equals=[]):
+def filter_by_column(data, col, equals=[]):
     """Filters construction data based on one column. You only specify ONE column to filter by, but can selected MANY values for the entry.
 
+    TODO: Handle Error returns better!
+
     Args:
-        data (pd.DataFrame, optional): dataframe to filter. Defaults to None.
+        data (pd.DataFrame): dataframe to filter.
         col (str, optional): column to filter. Example: col='STATION_ID'. Defaults to None.
         equals (list, optional): values to filter col by. Examples: equals=['FAI001A', 'FAI001B']. Defaults to [].
 
@@ -109,30 +111,45 @@ def filter_by_column(self, data=None, col=None, equals=[]):
         pd.DataFrame: returns filtered dataframe
     """
     if(data is None):
+        filters_logger.error('ERROR: DataFrame was not provided to this function.')
         return 'ERROR: DataFrame was not provided to this function.'
     else:
-        if(str(type(data)).lower().find('dataframe') == -1):
+        # if(str(type(data)).lower().find('dataframe') == -1):
+        if not isinstance(data, pd.DataFrame):
+            filters_logger.error('ERROR: Data provided is not a pandas DataFrame.')
             return 'ERROR: Data provided is not a pandas DataFrame.'
         else:
             data = data
+    
     # DATA VALIDATION
     if(col==None):
+        filters_logger.error('ERROR: Specify a column name to filter by.')
         return 'ERROR: Specify a column name to filter by.'
-    data_cols = list(data.columns)
-    if((col in data_cols)==False): # Make sure column name exists 
+
+    # data_cols = list(data.columns)
+    # if((col in data_cols)==False): # Make sure column name exists 
+    if col not in data.columns: # Make sure column name exists 
+        filters_logger.error(f'Error: Column name {col} does not exist')
         return 'Error: Column name "{}" does not exist'.format(col)
+    
     if(equals==[]):
         return 'ERROR: Specify a value that "{}" should equal to'.format(col)
-    data_val = list(data[col])
-    for value in equals:
-        if((value in data_val)==False):
-            return 'ERROR: No value equal to "{}" in "{}".'.format(value, col)
+    
+    # data_val = list(data[col])
+    # for value in equals:
+    #     if((value in data_val)==False):
+    #         return 'ERROR: No value equal to "{}" in "{}".'.format(value, col)
+    values_not_in_data = set(equals).difference(set(data[col]))
+    if len(values_not_in_data) > 0:
+        filters_logger.error(f'ERROR: {values_not_in_data} do not exist in {col}.')
+        return f'ERROR: {values_not_in_data} do not exist in {col}.'
 
     # QUERY
-    final_data = pd.DataFrame()
-    for value in equals:
-        current_data = data[data[col]==value]
-        final_data = pd.concat([final_data, current_data])
+    # final_data = pd.DataFrame()
+    # for value in equals:
+    #     current_data = data[data[col]==value]
+    #     final_data = pd.concat([final_data, current_data])
+    final_data = data[[item in equals for item in data[col]]]
     return final_data
 
 
