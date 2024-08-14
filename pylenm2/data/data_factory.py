@@ -88,11 +88,15 @@ class PylenmDataFactory(object):
 
     
     def __set_units(self):
-        analytes = list(np.unique(self.data[['ANALYTE_NAME']]))
-        mask1 = ~self.data[['ANALYTE_NAME','RESULT_UNITS']].duplicated()
-        res = self.data[['ANALYTE_NAME','RESULT_UNITS']][mask1]
-        mask2 = ~self.data[['ANALYTE_NAME']].duplicated()
-        res = res[mask2]        # NOTE: Generates warning => UserWarning: Boolean Series key will be reindexed to match DataFrame index. # TODO: Check later.
+        # analytes = list(np.unique(self.data[['ANALYTE_NAME']]))
+        # mask1 = ~self.data[['ANALYTE_NAME','RESULT_UNITS']].duplicated()
+        # res = self.data[['ANALYTE_NAME','RESULT_UNITS']][mask1]
+        # mask2 = ~self.data[['ANALYTE_NAME']].duplicated()
+        # res = res[mask2]        # NOTE: Generates warning => UserWarning: Boolean Series key will be reindexed to match DataFrame index. # TODO: Check later.
+        
+        res = self.data[['ANALYTE_NAME','RESULT_UNITS']].drop_duplicates(
+            subset="ANALYTE_NAME",
+        )
         unit_dictionary = pd.Series(res.RESULT_UNITS.values,index=res.ANALYTE_NAME).to_dict()
         self.unit_dictionary = unit_dictionary
     
