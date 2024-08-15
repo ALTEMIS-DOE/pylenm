@@ -128,7 +128,7 @@ def getJointData(self, analytes, lag=3):
 
 
 def get_analyte_details(
-        data_pdf, 
+        data_pylenm_dm, 
         analyte_name, 
         filter=False, 
         col=None, 
@@ -141,7 +141,7 @@ def get_analyte_details(
     TODO: Handle error returns better!
 
     Args:
-        data_pdf (pylenm2.PylenmDataFactory): PylenmDataFactory object containing the construction data.
+        data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
         analyte_name (str): name of the analyte to be processed
         filter (bool, optional): whether to filter the data. Defaults to False.
         col (str, optional): column to filter. Example: col='STATION_ID'. Defaults to None.
@@ -152,14 +152,14 @@ def get_analyte_details(
     Returns:
         pd.DataFrame: Table with well information
     """
-    data = data_pdf.data
+    data = data_pylenm_dm.data
     data = data[data.ANALYTE_NAME == analyte_name].reset_index().drop('index', axis=1)
     data = data[~data.RESULT.isna()]
     data = data.drop(['ANALYTE_NAME', 'RESULT', 'RESULT_UNITS'], axis=1)
     data.COLLECTION_DATE = pd.to_datetime(data.COLLECTION_DATE)
     if(filter):
         filter_res = filters.filter_by_column(
-            data=data_pdf.construction_data, 
+            data=data_pylenm_dm.construction_data, 
             col=col, 
             equals=equals,
         )
@@ -201,10 +201,21 @@ def get_analyte_details(
     return details
 
 
-def get_data_summary(self, analytes=None, sort_by='date', ascending=False, filter=False, col=None, equals=[]):
+def get_data_summary(
+        data_pylenm_dm, 
+        analytes=None, 
+        sort_by='date', 
+        ascending=False, 
+        filter=False, 
+        col=None, 
+        equals=[],
+    ):
     """Returns a dataframe with a summary of the data for certain analytes. Summary includes the date ranges and the number of unique samples and other statistics for the analyte results.
 
+    TODO: Handle error returns better!
+
     Args:
+        data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
         analytes (list, optional): list of analyte names to be processed. If left empty, a list of all the analytes in the data will be used. Defaults to None.
         sort_by (str, optional): {‘date’, ‘samples’, ‘wells’} sorts the data by either the dates by entering: ‘date’, the samples by entering: ‘samples’, or by unique well locations by entering ‘wells’. Defaults to 'date'.
         ascending (bool, optional): flag to sort in ascending order.. Defaults to False.
@@ -215,7 +226,7 @@ def get_data_summary(self, analytes=None, sort_by='date', ascending=False, filte
     Returns:
         pd.DataFrame: Table with well information
     """
-    data = self.data
+    data = data_pylenm_dm.data
     if(analytes == None):
         analytes = data.ANALYTE_NAME.unique()
     data = data.loc[data.ANALYTE_NAME.isin(analytes)].drop(['RESULT_UNITS'], axis=1)
@@ -223,13 +234,20 @@ def get_data_summary(self, analytes=None, sort_by='date', ascending=False, filte
     data.COLLECTION_DATE = pd.to_datetime(data.COLLECTION_DATE)
     data = data[~data.RESULT.isna()]
     if(filter):
-        filter_res = self.filter_by_column(data=self.construction_data, col=col, equals=equals)
-        if('ERROR:' in str(filter_res)):
+        filter_res = filters.filter_by_column(
+            data=data_pylenm_dm.construction_data, 
+            col=col, 
+            equals=equals,
+        )
+        if('ERROR:' in str(filter_res)):    # TODO: Handle Error returns better
+            fetchers_logger.error("Ran into ERROR when calling filter_by_column()!")
             return filter_res
+        
         query_wells = list(data.STATION_ID.unique())
         filter_wells = list(filter_res.index.unique())
         intersect_wells = list(set(query_wells) & set(filter_wells))
         if(len(intersect_wells)<=0):
+            fetchers_logger.error('ERROR: No results for this query with the specifed filter parameters.')
             return 'ERROR: No results for this query with the specifed filter parameters.'
         data = data[data['STATION_ID'].isin(intersect_wells)]
 
@@ -244,32 +262,45 @@ def get_data_summary(self, analytes=None, sort_by='date', ascending=False, filte
         stats = pd.DataFrame(stats).T
         stats_col = [x for x in stats.columns]
 
-        result = {'Analyte Name': analyte_name, 'Start Date': startDate, 'End Date': endDate,
-                    'Date Range (days)':endDate-startDate, '# unique wells': wellCount,'# samples': numSamples,
-                    'Unit': self.get_unit(analyte_name) }
+        result = {
+            'Analyte Name': analyte_name, 
+            'Start Date': startDate, 
+            'End Date': endDate, 
+            'Date Range (days)':endDate-startDate, 
+            '# unique wells': wellCount, 
+            '# samples': numSamples, 
+            'Unit': data_pylenm_dm.get_unit(analyte_name), 
+        }
         for num in range(len(stats_col)):
             result[stats_col[num]] = stats.iloc[0][num] 
 
         info.append(result)
 
-        details = pd.DataFrame(info)
-        details.index = details['Analyte Name']
-        details = details.drop('Analyte Name', axis=1)
-        if(sort_by.lower() == 'date'):
-            details = details.sort_values(by=['Start Date', 'End Date', 'Date Range (days)'], ascending=ascending)
-        elif(sort_by.lower() == 'samples'):
-            details = details.sort_values(by=['# samples'], ascending=ascending)
-        elif(sort_by.lower() == 'wells'):
-            details = details.sort_values(by=['# unique wells'], ascending=ascending)
+    details = pd.DataFrame(info)
+    details.index = details['Analyte Name']
+    details = details.drop('Analyte Name', axis=1)
+    if(sort_by.lower() == 'date'):
+        details = details.sort_values(by=['Start Date', 'End Date', 'Date Range (days)'], ascending=ascending)
+    elif(sort_by.lower() == 'samples'):
+        details = details.sort_values(by=['# samples'], ascending=ascending)
+    elif(sort_by.lower() == 'wells'):
+        details = details.sort_values(by=['# unique wells'], ascending=ascending)
 
     return details
 
 
-def get_well_analytes(self, well_name=None, filter=False, col=None, equals=[]):
+def get_well_analytes(
+        data_pylenm_dm, 
+        well_names=None, 
+        filter=False, 
+        col=None, 
+        equals=[],
+    ):
     """Displays the analyte names available at given well locations.
 
     Args:
-        well_name (str, optional): name of the well. If left empty, all wells are returned.. Defaults to None.
+        data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
+        well_names (str, List[str], optional): names of the well. If left empty, all wells are returned. The input can either be a str, List[str], or None. Defaults to None.
         filter (bool, optional): flag to indicate filtering. Defaults to False.
         col (str, optional): column to filter. Example: col='STATION_ID'. Defaults to None.
         equals (list, optional): values to filter col by. Examples: equals=['FAI001A', 'FAI001B']. Defaults to [].
@@ -277,25 +308,48 @@ def get_well_analytes(self, well_name=None, filter=False, col=None, equals=[]):
     Returns:
         None
     """
-    data = self.data
+    data = data_pylenm_dm.data
     bb = "\033[1m"
     be = "\033[0m"
+    
     if(filter):
-        filter_res = self.filter_by_column(data=self.construction_data, col=col, equals=equals)
+        filter_res = filters.filter_by_column(
+            data=data_pylenm_dm.construction_data, 
+            col=col, 
+            equals=equals,
+        )
+        
         if('ERROR:' in str(filter_res)):
+            fetchers_logger.error("Ran into ERROR when calling filter_by_column()!")
             return filter_res
+        
         query_wells = list(data.STATION_ID.unique())
         filter_wells = list(filter_res.index.unique())
         intersect_wells = list(set(query_wells) & set(filter_wells))
         if(len(intersect_wells)<=0):
+            fetchers_logger.error('ERROR: No results for this query with the specifed filter parameters.')
             return 'ERROR: No results for this query with the specifed filter parameters.'
         data = data[data['STATION_ID'].isin(intersect_wells)]
     
-    if(well_name==None):
+    if(well_names==None):
         wells = list(data.STATION_ID.unique())
+    elif isinstance(well_names, str):
+        wells = [well_names]
+    elif isinstance(well_names, list):
+        if len(well_names) > 0:
+            wells = well_names
+        else:
+            wells = list(data.STATION_ID.unique())
     else:
-        wells = [well_name]
+        fetchers_logger.error("Invalid input for well_names! The input should either be a str, List[str], or None.")
+        raise ValueError("Invalid input for well_names! The input should either be a str, List[str], or None.")
+    
+    well_analytes = dict()
     for well in wells:
-        print("{}{}{}".format(bb,str(well), be))
         analytes = sorted(list(data[data.STATION_ID==well].ANALYTE_NAME.unique()))
-        print(str(analytes) +'\n')
+        
+        fetchers_logger.debug(f"{bb}{str(well)}{be}: {str(analytes)}")
+
+        well_analytes[well] = analytes
+
+    return well_analytes
