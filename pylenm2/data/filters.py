@@ -2,8 +2,6 @@ import os
 import pandas as pd
 
 import pylenm2
-import pylenm2.data
-import pylenm2.data.data_factory
 from pylenm2.utils import constants as c
 
 import logging
@@ -47,11 +45,11 @@ def simplify_data(
     #     data = data
     if isinstance(data, pd.DataFrame):
         data_df = data.copy(deep=True)
-    elif isinstance(data, pylenm2.PylenmDataFactory):
+    elif isinstance(data, pylenm2.PylenmDataModule):
         data_df = data.data.copy(deep=True)
     else:
-        filters_logger.error("`data` must be either a pandas DataFrame or PylenmDataFactory!")
-        raise ValueError("`data` must be either a pandas DataFrame or PylenmDataFactory!")
+        filters_logger.error("`data` must be either a pandas DataFrame or PylenmDataModule!")
+        raise ValueError("`data` must be either a pandas DataFrame or PylenmDataModule!")
 
         
     if columns==None:
@@ -88,7 +86,7 @@ def simplify_data(
             data.drop(columns=list(set(data.columns).difference(sel_cols)), inplace=True)
             data[sel_cols] = data_df[sel_cols]
     
-        elif isinstance(data, pylenm2.PylenmDataFactory):
+        elif isinstance(data, pylenm2.PylenmDataModule):
             data.setData(data_df, verbose=False)
         
         else:
