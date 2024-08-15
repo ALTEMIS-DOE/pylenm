@@ -14,7 +14,8 @@ df_logger = logger_config.setup_logging(
 )
 
 
-class PylenmDataFactory(object):
+# class PylenmDataFactory(object):
+class PylenmDataModule(object):
     """Class object that initilaizes Pylenm given data.
     """
     
