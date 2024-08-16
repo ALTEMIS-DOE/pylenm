@@ -1,4 +1,8 @@
-def dist(self, p1, p2):
+from math import sqrt
+from sklearn.metrics import mean_squared_error
+
+
+def dist(p1, p2):
     """2D Euclidean distance function
 
     Args:
@@ -11,7 +15,7 @@ def dist(self, p1, p2):
     return sqrt(((p1[0]-p2[0])**2)+((p1[1]-p2[1])**2))
 
 
-def mse(self, y_true, y_pred):
+def mse(y_true, y_pred):
     """Error Metric: Mean Squared Error 
 
     Args:
