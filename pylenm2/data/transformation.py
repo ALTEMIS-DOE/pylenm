@@ -1,3 +1,6 @@
+from pylenm2.stats import metrics
+
+
 def interpolate_well_data(self, well_name, analytes, frequency='2W'):
     """Resamples the data based on the frequency specified and interpolates the values of the analytes.
 
@@ -126,7 +129,7 @@ def __transform_time_series(self, analytes=[], resample='2W', rm_outliers=False,
     return vectorized_df, dates
 
 
-def add_dist_to_source(self, XX, source_coordinate=[436642.70,3681927.09], col_name='dist_to_source'):
+def add_dist_to_source(XX, source_coordinate=[436642.70,3681927.09], col_name='dist_to_source'):
     """adds column to data with the distance of a record to the source coordinate
 
     Args:
@@ -141,6 +144,7 @@ def add_dist_to_source(self, XX, source_coordinate=[436642.70,3681927.09], col_n
     distances = []
     for i in range(XX.shape[0]):
         x2,y2 = XX.iloc[i][0], XX.iloc[i][1]
-        distances.append(self.dist([x1,y1],[x2,y2]))
+        # distances.append(self.dist([x1,y1],[x2,y2]))
+        distances.append(metrics.dist([x1,y1],[x2,y2]))
     XX[col_name] = distances
     return XX
