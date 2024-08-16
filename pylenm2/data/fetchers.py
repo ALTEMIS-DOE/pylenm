@@ -32,22 +32,29 @@ def __getLagDate(self, date, lagDays=7):
     return dateStart, dateEnd
 
 
-def getCleanData(self, analytes):
+def getCleanData(data_pylenm_dm, analytes):
     """Creates a table filling the data from the concentration dataset for a given analyte list where the columns are multi-indexed as follows [analytes, well names] and the index is all of the dates in the dataset. Many NaN should be expected.
 
     Args:
+        data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
         analytes (list): list of analyte names to use
 
     Returns:
         pd.DataFrame
     """
-    curr = self.data[['STATION_ID', 'COLLECTION_DATE', 'ANALYTE_NAME', 'RESULT']]
+    curr = data_pylenm_dm.data[['STATION_ID', 'COLLECTION_DATE', 'ANALYTE_NAME', 'RESULT']]
+    
+    # Get data from only the specified analytes (TODO: improve code)
     main = pd.DataFrame()
     for ana in analytes:
         main = pd.concat([main, curr[curr.ANALYTE_NAME==ana]])
+
+    # Get the pivot data results
     piv = main.pivot_table(index=['COLLECTION_DATE'],columns=['ANALYTE_NAME', 'STATION_ID'], values='RESULT', aggfunc=np.mean)
+    
     piv.index = pd.to_datetime(piv.index)
     piv.sort_index(inplace=True)
+    
     return piv
 
 
