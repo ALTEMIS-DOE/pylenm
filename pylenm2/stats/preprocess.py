@@ -1,3 +1,7 @@
+import numpy as np
+import scipy.stats as stats
+
+
 # Helper function for plot_correlation
 # Sorts analytes in a specific order: 'TRITIUM', 'URANIUM-238','IODINE-129','SPECIFIC CONDUCTANCE', 'PH', 'DEPTH_TO_WATER'
 def __custom_analyte_sort(self, analytes):
@@ -20,19 +24,36 @@ def get_MCL(self, analyte_name):
     return mcl_dictionary[analyte_name]
 
 
-def remove_outliers(self, data, z_threshold=4):
+def remove_outliers(
+        data, 
+        z_threshold=4,
+        nan_policy="omit",
+    ):
     """Removes outliers from a dataframe based on the z_scores and returns the new dataframe.
 
     Args:
         data (pd.DataFrame): data for the outliers to removed from
-        z_threshold (int, optional): z_score threshold to eliminate. Defaults to 4.
+        z_threshold (int, optional): z_score threshold to eliminate. Values above this threshold are elimited. Defaults to 4. 
+            NOTE: Get it confirmed by the @Zexuan and @Haruko.
+        nan_policy (str, optional): specifies how to handle `nan` values. Passed in the stats.zscore() function.
+            Options are one of:
+                'propagate': returns nan.
+                'raise': throws an error.
+                'omit': performs the calculations ignoring nan values.
+            Default is 'omit'.
 
     Returns:
         pd.DataFrame: data with outliers removed
     """
-    z = np.abs(stats.zscore(data))
-    row_loc = np.unique(np.where(z > z_threshold)[0])
-    data = data.drop(data.index[row_loc])
+
+    z = np.abs(stats.zscore(data, nan_policy=nan_policy))
+    # row_loc = np.unique(np.where(z > z_threshold)[0])
+    
+    # Setting values outside threshold to `nan` values.
+    # data = data.drop(data.index[row_loc])
+    # data = data[z <= z_threshold]
+    data[z > z_threshold] = np.nan
+    
     return data
 
 
@@ -71,6 +92,7 @@ def __get_Best_Well(self, X, y, xx, ref, selected, leftover, ft=['Elevation'], r
     if(verbose):
         print("Selected well: {} with a MSE error of {}\n".format(min_ix, min_val))
     return min_ix, min_val
+
 
 def get_Best_Wells(self, X, y, xx, ref, initial, max_wells, ft=['Elevation'], regression='linear', verbose=True, smooth=True, model=None):
     """Greedy optimization function to select a subset of wells as to minimizes the MSE from a reference map
