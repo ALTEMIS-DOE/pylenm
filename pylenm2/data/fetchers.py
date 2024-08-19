@@ -16,11 +16,25 @@ fetchers_logger = logger_config.setup_logging(
 )
 
 
-def __get_individual_analyte_df(self, data, dates, analyte):
+def _get_individual_analyte_df(data, dates, analyte):
+    """<Function docstring> TODO: write function docstring
+
+    Args:
+        data (pd.DataaFrame): input dataframe.
+        dates (pd.Series): input dates.
+            TODO: Confirm the data type.
+        analyte (str): name of the analyte.
+    
+    Returns:
+        pd.DataFrame: Sample analytes based on the input arguments.
+    """
+
     sample = data[analyte]
     sample_analyte = pd.DataFrame(sample, index=dates, columns=sample.index)
+    
     for well in sample.index:
         sample_analyte[well] = sample[well]
+    
     return sample_analyte
 
 
