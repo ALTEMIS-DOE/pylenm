@@ -29,7 +29,7 @@ def simplify_data(
         The function returns a dataframe and has an optional parameter to be able to save the dataframe to a csv file.
 
     Args:
-        data (pd.DataFrame, optional): data to simplify. Defaults to None.
+        data (pd.DataFrame, pylenm2.PylenmDataModule, optional): data to simplify.
         inplace (bool, optional): save data to current working dataset. Defaults to False.
         columns (list, optional): list of any additional columns on top of  ['COLLECTION_DATE', 'STATION_ID', 'ANALYTE_NAME', 'RESULT', and 'RESULT_UNITS'] to be kept in the dataframe. Defaults to None.
         save_csv (bool, optional): flag to determine whether or not to save the dataframe to a csv file. Defaults to False.
@@ -50,7 +50,6 @@ def simplify_data(
     else:
         filters_logger.error("`data` must be either a pandas DataFrame or PylenmDataModule!")
         raise ValueError("`data` must be either a pandas DataFrame or PylenmDataModule!")
-
         
     if columns==None:
         # sel_cols = ['COLLECTION_DATE','STATION_ID','ANALYTE_NAME','RESULT','RESULT_UNITS']
@@ -189,20 +188,22 @@ def filter_wells(self, units):
     return list(res.STATION_ID)
 
 
-def query_data(self, well_name, analyte_name):
+def query_data(data_pylenm_dm, well_name, analyte_name):
     """Filters data by passing the data and specifying the well_name and analyte_name
 
     Args:
+        data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
         well_name (str): name of the well to be processed
         analyte_name (str): name of the analyte to be processed
 
     Returns:
         pd.DataFrame: filtered data based on query conditons
     """
-    data = self.data
+    data = data_pylenm_dm.data
     query = data[data.STATION_ID == well_name]
     query = query[query.ANALYTE_NAME == analyte_name]
     if(query.shape[0] == 0):
-        return 0
+        return 0        # TODO: Handle this better!
+        # return pd.DataFrame(columns=data.columns)   # TODO: Use this once you make sure that the above return value is not being used anywhere else.
     else:
         return query
