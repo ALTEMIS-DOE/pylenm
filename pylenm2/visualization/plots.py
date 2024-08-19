@@ -1,3 +1,24 @@
+import os
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+from supersmoother import SuperSmoother
+
+from pylenm2.data import filters
+from pylenm2.utils import constants as c
+
+import logging
+from pylenm2 import logger_config
+
+plots_logger = logger_config.setup_logging(
+    module_name=__name__,
+    # level=logging.INFO,
+    level=logging.DEBUG,
+    logfile_dir=c.LOGFILE_DIR,
+)
+
+
 def __plotUpperHalf(self, *args, **kwargs):
     corr_r = args[0].corr(args[1], 'pearson')
     corr_text = f"{corr_r:2.2f}"
@@ -11,64 +32,110 @@ def __plotUpperHalf(self, *args, **kwargs):
                 ha='center', va='center', fontsize=font_size, fontweight='bold')
 
 
-def plot_data(self, well_name, analyte_name, log_transform=True, alpha=0,
-            plot_inline=True, year_interval=2, x_label='Years', y_label='', save_dir='plot_data', filter=False, col=None, equals=[]):
+def plot_data(
+        data_pylenm_dm, 
+        well_name, 
+        analyte_name, 
+        log_transform=True, 
+        alpha=0,
+        plot_inline=True, 
+        year_interval=2, 
+        x_label='Years', 
+        y_label='',
+        save_plot=False, 
+        save_dir='plot_data', 
+        filter=False, 
+        col=None, 
+        equals=[],
+    ):
     """Plot concentrations over time of a specified well and analyte with a smoothed curve on interpolated data points.
 
     Args:
-
+        data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
         well_name (str): name of the well to be processed
         analyte_name (str): name of the analyte to be processed
-        log_transform (bool, optional): choose whether or not the data should be transformed to log base 10 values. Defaults to True.
-        alpha (int, optional): alue between 0 and 10 for line smoothing. Defaults to 0.
-        plot_inline (bool, optional): choose whether or not to show plot inline. Defaults to True.
-        year_interval (int, optional): plot by how many years to appear in the axis e.g.(1 = every year, 5 = every 5 years, ...). Defaults to 2.
+        log_transform (bool, optional): choose whether or not the data should 
+            be transformed to log base 10 values. Defaults to `True`.
+        alpha (int, optional): value between 0 and 10 for line smoothing. 
+            Defaults to 0.
+        plot_inline (bool, optional): `True` to show plot inline else `False`. 
+            Defaults to `True`.
+        year_interval (int, optional): plot by how many years to appear in the 
+            axis e.g.(1 = every year, 5 = every 5 years, ...). Defaults to 2.
         x_label (str, optional): x axis label. Defaults to 'Years'.
         y_label (str, optional): y axis label. Defaults to ''.
-        save_dir (str, optional): name of the directory you want to save the plot to. Defaults to 'plot_data'.
-        filter (bool, optional): flag to indicate filtering. Defaults to False.
-        col (str, optional): column to filter. Example: col='STATION_ID'. Defaults to None.
-        equals (list, optional): values to filter col by. Examples: equals=['FAI001A', 'FAI001B']. Defaults to [].
+        save_plot (bool, optional): `True` to save the plot to the `save_dir` 
+            else `False`. Defaults to `False`.
+        save_dir (str, optional): name of the directory you want to save the 
+            plot to. `save_plot` must be `True` for this to be useful. 
+            Defaults to 'plot_data'.
+        filter (bool, optional): flag to indicate filtering. 
+            Defaults to `False`.
+        col (str, optional): column to filter. Example: col='STATION_ID'. 
+            Defaults to None.
+        equals (list, optional): values to filter col by. 
+            Examples: equals=['FAI001A', 'FAI001B']. Defaults to [].
 
     Returns:
         None
     """
 
     # Gets appropriate data (well_name and analyte_name)
-    query = self.query_data(well_name, analyte_name)
-    query = self.simplify_data(data=query)
+    query = filters.query_data(
+        data_pylenm_dm=data_pylenm_dm, 
+        well_name=well_name, 
+        analyte_name=analyte_name,
+    )       # TODO: Handle better for empty values.
+    query = filters.simplify_data(data=query)
 
+    # Check if the query returned any results
     if(type(query)==int and query == 0):
-        return 'No results found for {} and {}'.format(well_name, analyte_name)
+        return f'No results found for {well_name} and {analyte_name}'
     else:
+        # Filter the data by the specified column and values (if necessary)
         if(filter):
-            filter_res = self.filter_by_column(data=self.construction_data, col=col, equals=equals)
+            filter_res = filters.filter_by_column(
+                data=data_pylenm_dm.construction_data, 
+                col=col, 
+                equals=equals,
+            )
+            
             if('ERROR:' in str(filter_res)):
+                plots_logger.error("Ran into ERROR when calling filter_by_column()!")
                 return filter_res
+
+            # Get the intersection of the query wells and filter wells
             query_wells = list(query.STATION_ID.unique())
             filter_wells = list(filter_res.index.unique())
             intersect_wells = list(set(query_wells) & set(filter_wells))
             if(len(intersect_wells)<=0):
+                plots_logger.error('ERROR: No results for this query with the specifed filter parameters.')
                 return 'ERROR: No results for this query with the specifed filter parameters.'
             query = query[query['STATION_ID'].isin(intersect_wells)]
+        
+        # Extract the date and result values from the query data
         x_data = query.COLLECTION_DATE
         x_data = pd.to_datetime(x_data)
         y_data = query.RESULT
         if(log_transform):
             y_data = np.log10(y_data)
 
+        # Prepare data for Supersmoother
         x_RR = x_data.astype(int).to_numpy()
-
         nu = x_data.shape[0]
 
+        # Create and fit supersmoother model
         model = SuperSmoother(alpha=alpha)
         model.fit(x_RR, y_data)
+        
+        # Get smoothed predictions, residuals and outliers from the model.
         y_pred = model.predict(x_RR)
         r = model.cv_residuals()
         out = abs(r) > 2.2*np.std(r)
         out_x = x_data[out]
         out_y = y_data[out]
 
+        # Plot data
         plt.figure(figsize=(8,8))
         ax = plt.axes()
         years = mdates.YearLocator(year_interval)  # every year
@@ -114,11 +181,21 @@ def plot_data(self, well_name, analyte_name, log_transform=True, alpha=0,
                 fontweight='bold',
                 verticalalignment='top', 
                 bbox=props)
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        # plt.savefig(save_dir + '/' + str(well_name) + '-' + analyte_name +'.png', bbox_inches="tight")
+        
+        # Save the plot to `save_dir` (if necessary)
+        if save_plot:
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            plt.savefig(
+                f"{save_dir}/{str(well_name)}-{analyte_name}.png", 
+                bbox_inches="tight",
+            )
+        
+        # Show plot inline (used in notebooks)
         if(plot_inline):
             plt.show()
+        
+        # Clear all the plots from memory
         plt.clf()
         plt.cla()
         plt.close()
