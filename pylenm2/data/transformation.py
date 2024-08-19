@@ -1,4 +1,20 @@
+import numpy as np
+import pandas as pd
+
+from pylenm2.data import fetchers
 from pylenm2.stats import metrics
+from pylenm2.stats import preprocess
+from pylenm2.utils import constants as c
+
+import logging
+from pylenm2 import logger_config
+
+transformation_logger = logger_config.setup_logging(
+    module_name=__name__,
+    # level=logging.INFO,
+    level=logging.DEBUG,
+    logfile_dir=c.LOGFILE_DIR,
+)
 
 
 def interpolate_well_data(self, well_name, analytes, frequency='2W'):
@@ -34,10 +50,17 @@ def interpolate_well_data(self, well_name, analytes, frequency='2W'):
     return join
 
 
-def interpolate_wells_by_analyte(self, analyte, frequency='2W', rm_outliers=True, z_threshold=3):
+def interpolate_wells_by_analyte(
+        data_pylenm_dm, 
+        analyte, 
+        frequency='2W', 
+        rm_outliers=True, 
+        z_threshold=3,
+    ):
     """Resamples analyte data based on the frequency specified and interpolates the values in between. NaN values are replaced with the average value per well.
 
     Args:
+        data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
         analyte (_type_): analyte name for interpolation of all present wells.
         frequency (str, optional): {‘D’, ‘W’, ‘M’, ‘Y’} frequency to interpolate. See https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html for valid frequency inputs. (e.g. ‘W’ = every week, ‘D ’= every day, ‘2W’ = every 2 weeks). Defaults to '2W'.
         rm_outliers (bool, optional): flag to remove outliers in the data. Defaults to True.
@@ -46,57 +69,115 @@ def interpolate_wells_by_analyte(self, analyte, frequency='2W', rm_outliers=True
     Returns:
         pd.DataFrame: interpolated data
     """
-    data = self.data
-    df_t, dates = self.__transform_time_series( 
-                                                analytes=[analyte], 
-                                                resample=frequency, 
-                                                rm_outliers=True, 
-                                                z_threshold=z_threshold)
-    res_interp = self.__get_individual_analyte_df(data=df_t, dates=dates, analyte=analyte)
+    # data = data_pylenm_dm.data
+
+    df_t, dates = _transform_time_series( 
+        data_pylenm_dm=data_pylenm_dm,
+        analytes=[analyte], 
+        resample=frequency, 
+        rm_outliers=True, 
+        z_threshold=z_threshold,
+    )
+
+    res_interp = fetchers._get_individual_analyte_df(
+        data=df_t, 
+        dates=dates, 
+        analyte=analyte,
+    )
     res_interp = res_interp.dropna(axis=1, how='all')
+    
     return res_interp
 
 
 # IN THE WORKS
-def __transform_time_series(self, analytes=[], resample='2W', rm_outliers=False, z_threshold=4):
-    data = self.data
+def _transform_time_series(
+        data_pylenm_dm, 
+        analytes=[], 
+        resample='2W', 
+        rm_outliers=False, 
+        z_threshold=4,
+    ):
+    """<Function docstring> TODO: write function docstring.
+
+    Args:
+        data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
+        ... TODO: Write the args docstring.
+
+    Returns:
+        Tuple[pd.DataFrame, pd.DatetimeIndex]: Returns a tuple of the dataframe and the dates. TODO: Write more details about the returned data.
+    """
+
+    data = data_pylenm_dm.data
+    
     def transform_time_series_by_analyte(data, analyte_name):
-        wells_analyte = np.unique(data[data.ANALYTE_NAME == analyte_name].STATION_ID)
-        condensed = data[data.ANALYTE_NAME == analyte_name].groupby(['STATION_ID','COLLECTION_DATE']).mean()
-        analyte_df_resample = pd.DataFrame(index=wells_analyte, columns=t)
+        """<Nested-Function docstring> TODO: write function docstring.
+
+        Args:
+            data (pd.DataFrame): input dataframe.
+            analyte_name (str): name of the analyte.
+        
+        Returns:
+            pd.DataFrame: return sample dataframe for the analyte.
+        """
+        # wells_analyte = np.unique(data[data.ANALYTE_NAME == analyte_name].STATION_ID)
+
+        # all_dates = np.unique(data.COLLECTION_DATE)
+        # Create array of equally spaced dates
+        start_date = pd.Timestamp(data.COLLECTION_DATE.min())
+        end_date = pd.Timestamp(data.COLLECTION_DATE.max())
+        date_delta = (end_date - start_date) + pd.Timedelta(days=1)    # to include the end date as well
+        t = np.linspace(start_date.value, end_date.value, date_delta.days)
+        t = pd.to_datetime(t).date
+        # t = pd.Series(t)
+        # t = t.apply(lambda x: x.replace(minute=0, hour=0, second=0, microsecond=0, nanosecond=0))
+
+        # condensed = data[data.ANALYTE_NAME == analyte_name].groupby(['STATION_ID','COLLECTION_DATE']).mean()    # NOTE: Breaks the code
+        # condensed = data[data.ANALYTE_NAME == analyte_name].groupby(['STATION_ID','COLLECTION_DATE'])['RESULT'].mean().to_frame('RESULT')     # NOTE: Works. Result must have (well, date) as index
+        condensed = data[data.ANALYTE_NAME == analyte_name].groupby(['STATION_ID','COLLECTION_DATE'], as_index=False)['RESULT'].mean()  # NOTE: Much better approach.
+
+        analyte_df_resample = condensed.pivot(columns="COLLECTION_DATE", index="STATION_ID", values="RESULT")
+
+        # analyte_df_resample = pd.DataFrame(index=wells_analyte, columns=t)
         analyte_df_resample.sort_index(inplace=True)
-        for well in wells_analyte:
-            for date in condensed.loc[well].index:
-                analyte_df_resample.at[well, date] = condensed.loc[well,date].RESULT
+        
+        # for well in wells_analyte:    # NOTE: Performs pivot. Implemented more efficiently above.
+        #     for date in condensed.loc[well].index:
+        #         analyte_df_resample.at[well, pd.to_datetime(date).date()] = condensed.loc[well,date].RESULT
+        
         analyte_df_resample = analyte_df_resample.astype('float').T
         analyte_df_resample = analyte_df_resample.interpolate(method='linear')
         return analyte_df_resample
 
-    all_dates = np.unique(data.COLLECTION_DATE)
-    # Create array of equally spaced dates
-    start = pd.Timestamp(all_dates.min())
-    end = pd.Timestamp(all_dates.max())
-    delta = end - start
-    t = np.linspace(start.value, end.value, delta.days)
-    t = pd.to_datetime(t)
-    t = pd.Series(t)
-    t = t.apply(lambda x: x.replace(minute=0, hour=0, second=0, microsecond=0, nanosecond=0))
-
-    cutoff_dates = []
     # Save each analyte data
+    cutoff_dates = []
     analyte_data = []
     for analyte in analytes:
         ana_data = transform_time_series_by_analyte(data, analyte)
+
         if(rm_outliers):
             col_num = ana_data.shape[1]
+
             for col in range(col_num):
-                ana_data.iloc[:,col] = self.remove_outliers(ana_data.iloc[:,col].dropna(), z_threshold=z_threshold)
+
+                try:
+                    ana_data.iloc[:,col] = preprocess.remove_outliers(
+                        ana_data.iloc[:,col], 
+                        z_threshold=z_threshold,
+                        nan_policy='omit',  # Omit nan values while computing.
+                    )
+                except Exception as e:
+                    transformation_logger.error(e)
+
             ana_data = ana_data.interpolate(method='linear')
+        
         ana_data.index = pd.to_datetime(ana_data.index)
+        
         # Resample
         ana_data_resample = ana_data.resample(resample).mean()
+        
         # Save data
         analyte_data.append(ana_data_resample)
+        
         # Determine cuttoff point for number of NaNs in dataset
         passes_limit = []
         for date in ana_data_resample.index:
@@ -107,18 +188,25 @@ def __transform_time_series(self, analytes=[], resample='2W', rm_outliers=False,
                 if curr_total > limit:
                     passes_limit.append(date)
         passes_limit = pd.to_datetime(passes_limit)
+        
         cutoff_dates.append(passes_limit.min())
+    
     start_index = pd.Series(cutoff_dates).max()
 
     # Get list of shared wells amongst all the listed analytes
     combined_well_list = []
     for x in range(len(analytes)):
         combined_well_list = combined_well_list + list(analyte_data[x].columns)
+    
     combined_count = pd.Series(combined_well_list).value_counts()
-    shared_wells = list(combined_count[list(pd.Series(combined_well_list).value_counts()==len(analytes))].index)
+    shared_wells = list(
+        combined_count[
+            list(pd.Series(combined_well_list).value_counts()==len(analytes))
+        ].index
+    )
 
     # Vectorize data
-    vectorized_df = pd.DataFrame(columns=analytes, index = shared_wells)
+    vectorized_df = pd.DataFrame(columns=analytes, index=shared_wells)
 
     for analyte, num in zip(analytes, range(len(analytes))):
         for well in shared_wells:
@@ -126,10 +214,15 @@ def __transform_time_series(self, analytes=[], resample='2W', rm_outliers=False,
             vectorized_df.at[well, analyte] = analyte_data_full[start_index:].values
 
     dates = ana_data_resample[start_index:].index
+    
     return vectorized_df, dates
 
 
-def add_dist_to_source(XX, source_coordinate=[436642.70,3681927.09], col_name='dist_to_source'):
+def add_dist_to_source(
+        XX, 
+        source_coordinate=c.DEFAULT_SOURCE_COORDINATES, 
+        col_name='dist_to_source',
+    ):
     """adds column to data with the distance of a record to the source coordinate
 
     Args:
