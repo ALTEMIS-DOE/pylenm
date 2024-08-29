@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 
+from typing import Tuple
+
 from pylenm2.data import fetchers
 from pylenm2.stats import metrics
 from pylenm2.stats import preprocess
@@ -17,10 +19,17 @@ transformation_logger = logger_config.setup_logging(
 )
 
 
-def interpolate_well_data(self, well_name, analytes, frequency='2W'):
+def interpolate_well_data(
+        # self, 
+        data_pylenm_dm, 
+        well_name, 
+        analytes, 
+        frequency='2W',
+    ) -> pd.DataFrame:
     """Resamples the data based on the frequency specified and interpolates the values of the analytes.
 
     Args:
+        data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
         well_name (str): name of the well to be processed.
         analytes (list): list of analyte names to use
         frequency (str, optional): {‘D’, ‘W’, ‘M’, ‘Y’} frequency to interpolate. See https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html for valid frequency inputs. (e.g. ‘W’ = every week, ‘D ’= every day, ‘2W’ = every 2 weeks). Defaults to '2W'.
@@ -28,25 +37,32 @@ def interpolate_well_data(self, well_name, analytes, frequency='2W'):
     Returns:
         pd.DataFrame
     """
-    data = self.data
+    # data = self.data
+    data = data_pylenm_dm.data
     inter_series = {}
     query = data[data.STATION_ID == well_name]
+    
     for analyte in analytes:
         series = query[query.ANALYTE_NAME == analyte]
         series = (series[['COLLECTION_DATE', 'RESULT']])
         series.COLLECTION_DATE = pd.to_datetime(series.COLLECTION_DATE)
         series.index = series.COLLECTION_DATE
         original_dates = series.index
+        breakpoint()
         series = series.drop('COLLECTION_DATE', axis=1)
         series = series.rename({'RESULT': analyte}, axis=1)
         upsampled = series.resample(frequency).mean()
         interpolated = upsampled.interpolate(method='linear', order=2)
         inter_series[analyte] = interpolated
+    
     join = inter_series[analytes[0]]
     join = join.drop(analytes[0], axis=1)
+    
     for analyte in analytes:
         join = join.join(inter_series[analyte])
+    
     join = join.dropna()
+    
     return join
 
 
@@ -56,7 +72,7 @@ def interpolate_wells_by_analyte(
         frequency='2W', 
         rm_outliers=True, 
         z_threshold=3,
-    ):
+    ) -> pd.DataFrame:
     """Resamples analyte data based on the frequency specified and interpolates the values in between. NaN values are replaced with the average value per well.
 
     Args:
@@ -96,8 +112,9 @@ def _transform_time_series(
         resample='2W', 
         rm_outliers=False, 
         z_threshold=4,
-    ):
+    ) -> Tuple[pd.DataFrame, pd.DatetimeIndex]:
     """<Function docstring> TODO: write function docstring.
+    TODO: The function can be optimized a lot for a faster performance. Come back to this once everything is done.
 
     Args:
         data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
@@ -147,6 +164,13 @@ def _transform_time_series(
         analyte_df_resample = analyte_df_resample.astype('float').T
         analyte_df_resample = analyte_df_resample.interpolate(method='linear')
         return analyte_df_resample
+
+
+    data_analyte_groups = data.groupby("ANALYTE_NAME", as_index=False)
+    transformed_ts_data_analyte = data_analyte_groups.apply(
+        lambda subdf: transform_time_series_by_analyte(data=subdf, analyte_name=subdf.ANALYTE_NAME.iloc[0])
+    )
+
 
     # Save each analyte data
     cutoff_dates = []
@@ -222,7 +246,7 @@ def add_dist_to_source(
         XX, 
         source_coordinate=c.DEFAULT_SOURCE_COORDINATES, 
         col_name='dist_to_source',
-    ):
+    ) -> pd.DataFrame:
     """adds column to data with the distance of a record to the source coordinate
 
     Args:

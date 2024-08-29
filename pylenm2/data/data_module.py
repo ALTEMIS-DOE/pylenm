@@ -169,7 +169,7 @@ class PylenmDataModule(object):
             self.logger.warn(c.PYLENM_CONSTRUCTION_DATA_REQUIREMENTS)
 
 
-    def __set_jointData(self, data, lag):
+    def set_jointData(self, data, lag):
         self.__jointData[0] = data
         self.__jointData[1] = lag
     

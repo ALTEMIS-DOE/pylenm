@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 from pylenm2.data import filters
 from pylenm2.utils import constants as c
@@ -39,7 +40,8 @@ def _get_individual_analyte_df(data, dates, analyte):
 
 
 # Helper function to return start and end date for a date and a lag (+/- days)
-def __getLagDate(self, date, lagDays=7):
+# def __getLagDate(self, date, lagDays=7):
+def _getLagDate(date, lagDays=7):
     date = pd.to_datetime(date)
     dateStart = date - pd.DateOffset(days=lagDays)
     dateEnd = date + pd.DateOffset(days=lagDays)
@@ -72,78 +74,113 @@ def getCleanData(data_pylenm_dm, analytes):
     return piv
 
 
-def getCommonDates(self, analytes, lag=[3,7,10]):
+def getCommonDates(
+        # self, 
+        data_pylenm_dm,
+        analytes, 
+        lag=[3,7,10],
+    ) -> pd.DataFrame:
     """Creates a table which counts the number of wells within a range specified by a list of lag days.
+    TODO: Very slow. Check if efficiency can be improved.
 
     Args:
+        data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
         analytes (list): list of analyte names to use
         lag (list, optional): list of days to look ahead and behind the specified date (+/-). Defaults to [3,7,10].
 
     Returns:
         pd.DataFrame
     """
-    piv = self.getCleanData(analytes)
+    # piv = self.getCleanData(analytes)
+    piv = getCleanData(
+        data_pylenm_dm=data_pylenm_dm,
+        analytes=analytes,
+    )
     dates = piv.index
     names=['Dates', 'Lag']
     tuples = [dates, lag]
     finalData = pd.DataFrame(index=pd.MultiIndex.from_product(tuples, names=names), columns=['Date Ranges', 'Number of wells'])
+    
     for date in dates:
         for i in lag:
-            dateStart, dateEnd = self.__getLagDate(date, lagDays=i)
+            # dateStart, dateEnd = self.__getLagDate(date, lagDays=i)
+            dateStart, dateEnd = _getLagDate(date, lagDays=i)
             mask = (piv.index > dateStart) & (piv.index <= dateEnd)
             result = piv[mask].dropna(axis=1, how='all')
             numWells = len(list(result.columns.get_level_values(1).unique()))
             dateRange = str(dateStart.date()) + " - " + str(dateEnd.date())
             finalData.loc[date, i]['Date Ranges'] = dateRange
             finalData.loc[date, i]['Number of wells'] = numWells
+    
     return finalData
 
 
-def getJointData(self, analytes, lag=3):
+def getJointData(
+        data_pylenm_dm, 
+        analytes, 
+        lag=3,
+    ) -> pd.DataFrame:
     """Creates a table filling the data from the concentration dataset for a given analyte list where the columns are multi-indexed as follows [analytes, well names] and the index is the date ranges secified by the lag.
 
+    TODO: Replace current progress implementation with tqdm.
+
     Args:
+        data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
         analytes (list): list of analyte names to use
         lag (int, optional): number of days to look ahead and behind the specified date (+/-). Defaults to 3.
 
     Returns:
         pd.DataFrame
     """
-    if(self.jointData_is_set(lag=lag)==True):
-        finalData = self.__jointData[0]
+    # if(self.jointData_is_set(lag=lag)==True):
+    if(data_pylenm_dm.is_set_jointData(lag=lag)):
+        finalData = data_pylenm_dm.__jointData[0]
         return finalData
-    piv = self.getCleanData(analytes)
+    
+    piv = getCleanData(
+        data_pylenm_dm=data_pylenm_dm,
+        analytes=analytes,
+    )
+    
     dates = piv.index
     dateRanges = []
     for date in dates:
-        dateStart, dateEnd = self.__getLagDate(date, lagDays=lag)
+        dateStart, dateEnd = _getLagDate(date, lagDays=lag)
         dateRange = str(dateStart.date()) + " - " + str(dateEnd.date())
         dateRanges.append(dateRange)
+    
     finalData = pd.DataFrame(columns=piv.columns, index=dateRanges)
     numLoops = len(dates)
     everySomePercent = []
-    print("Generating data with a lag of {}.".format(lag).upper())
+    print("Generating data with a lag of {} days.".format(lag).upper())
     print("Progress:")
     for x in list(np.arange(1, 100, 1)):
         everySomePercent.append(round((x/100)*numLoops))
+    
     for date, iteration in zip(dates, range(numLoops)):
         if(iteration in everySomePercent):
             print(str(round(iteration/numLoops*100)) + "%", end=', ')
-        dateStart, dateEnd = self.__getLagDate(date, lagDays=lag)
+        
+        dateStart, dateEnd = _getLagDate(date, lagDays=lag)
         dateRange = str(dateStart.date()) + " - " + str(dateEnd.date())
         mask = (piv.index > dateStart) & (piv.index <= dateEnd)
         result = piv[mask].dropna(axis=1, how='all')
         resultCollapse = pd.concat([result[col].dropna().reset_index(drop=True) for col in result], axis=1)
+        
         # HANDLE MULTIPLE VALUES
         if(resultCollapse.shape[0]>1):
             resultCollapse = pd.DataFrame(resultCollapse.mean()).T
         resultCollapse = resultCollapse.rename(index={0: dateRange})
         for ana_well in resultCollapse.columns:
             finalData.loc[dateRange, ana_well] =  resultCollapse.loc[dateRange, ana_well]
+    
         # Save data to the pylenm global variable
-        self.__set_jointData(data=finalData, lag=lag)
+        # data_pylenm_dm.__set_jointData(data=finalData, lag=lag)
+        data_pylenm_dm.set_jointData(data=finalData, lag=lag)
+    
     for col in finalData.columns:
         finalData[col] = finalData[col].astype('float64')
+    
     print("Completed")
     return finalData
 
