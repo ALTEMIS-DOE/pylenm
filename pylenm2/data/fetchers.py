@@ -150,16 +150,17 @@ def getJointData(
         dateRanges.append(dateRange)
     
     finalData = pd.DataFrame(columns=piv.columns, index=dateRanges)
-    numLoops = len(dates)
-    everySomePercent = []
+    # numLoops = len(dates)
+    # everySomePercent = []
     print("Generating data with a lag of {} days.".format(lag).upper())
-    print("Progress:")
-    for x in list(np.arange(1, 100, 1)):
-        everySomePercent.append(round((x/100)*numLoops))
+    # print("Progress:")
+    # for x in list(np.arange(1, 100, 1)):
+    #     everySomePercent.append(round((x/100)*numLoops))
     
-    for date, iteration in zip(dates, range(numLoops)):
-        if(iteration in everySomePercent):
-            print(str(round(iteration/numLoops*100)) + "%", end=', ')
+    # for date, iteration in zip(dates, range(numLoops)):
+    for date in tqdm(dates, desc="Progress"):
+        # if(iteration in everySomePercent):
+        #     print(str(round(iteration/numLoops*100)) + "%", end=', ')
         
         dateStart, dateEnd = _getLagDate(date, lagDays=lag)
         dateRange = str(dateStart.date()) + " - " + str(dateEnd.date())
