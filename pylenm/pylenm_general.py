@@ -2481,14 +2481,6 @@ class PylenmDataFactory(object):
         outliers = working_data.iloc[outliers_iloc]
         working_data.iloc[outliers_iloc] = np.nan
 
-        #### debugging ####
-        # working_data.plot(style='.', title=working_data.name, ms=1)
-        # plt.show()
-        # difference.plot(style='.', title=working_data.name + ' difference', ms=1)
-        # difference.iloc[outliers_iloc].plot(style='x', ms=5)
-        # plt.show()
-        #### debugging ####
-
         if return_difference:
             return working_data, difference
         else:
@@ -2580,14 +2572,15 @@ class PylenmDataFactory(object):
 
 
     ## by K. Whiteaker 2024-08, kwhit@alum.mit.edu
-    def plot_data_weekAvg(self, station_name, analyte_name, rm_outliers=True, std_thresh=2.2, lowess_frac=0.1, show_difference=False, x_label=None, 
+    def plot_data_rollAvg(self, station_name, analyte_name, window='1W', rm_outliers=True, std_thresh=2.2, lowess_frac=0.1, show_difference=False, x_label=None, 
                          y_label=None, year_interval=2, log_transform=False, y_zoom=False, return_data=False, save=False, save_dir='plot_data_lowess',
                          plot_inline=True, save_as_pdf=False):
-        """Plot time series data for a specified station and analyte, alongside a curve calculated via a 1-week window rolling average
+        """Plot time series data for a specified station and analyte, alongside a curve calculated via a rolling time average (default 1 week) centred around each point
     
         Args:
             station_name (str): name of the station to be processed
             analyte_name (str): name of the analyte to be processed
+            window (str): the time length of the rolling window used for averaging, ex. '1W', '2D'. Defaults to '1W'. Months are not supported; valid inputs are listed here: https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html
             rm_outliers (bool, optional): if True, use lowess function to remove outliers. Defaults to True
             std_thresh (int, optional): number of standard deviations in (observation - LOWESS fit) outside of which is considered an outlier. Defaults to 2.2
             lowess_frac (float, optional): fraction of total data points considered in local fits of LOWESS smoother. A smaller value captures more local behaviour, and may be required for large datasets. Defaults to 0.1
@@ -2598,7 +2591,7 @@ class PylenmDataFactory(object):
             log_transform (bool, optional): choose whether or not the data should be transformed to log base 10 values. Defaults to False
             y_zoom (bool, optional): if True, plot y axes will zoom in to [minimum y value, maximum y value] after removing outliers. Defaults to False
             return_data (bool, optional): if True, return the data used to make the plots. Defaults to False
-            save (bool, optional): if True, save lowess and weekly averaging plots to file in save_dir. Defaults to False
+            save (bool, optional): if True, save plots to file in save_dir. Defaults to False
             save_dir (str, optional): name of the directory you want to save the plot to. Defaults to 'plot_data_lowess'
             plot_inline (bool, optional): choose whether or not to show plot inline. Defaults to True
             save_as_pdf (bool, optional): if True, saves figure as vectorized pdf instead of png. Defaults to False
@@ -2607,11 +2600,11 @@ class PylenmDataFactory(object):
             if return_data:
                 if rm_outliers:
                     pd.Series: concentration data with outliers set to np.nan, indexed by date
-                    pd.Series: 1-week rolling average of post-outlier-removal concentration data, indexed by date
+                    pd.Series: rolling average of post-outlier-removal concentration data, indexed by date
                     pd.Series: outliers, indexed by date
                 else:
                     pd.Series: concentration data, indexed by date
-                    pd.Series: 1-week rolling average of concentration data, indexed by date
+                    pd.Series: rolling average of concentration data, indexed by date
             else:
                 None
         """
@@ -2641,16 +2634,16 @@ class PylenmDataFactory(object):
         num_outliers = outliers.size
         analyte_max_xOutliers, analyte_min_xOutliers = max(concentration_data_xOutliers), min(concentration_data_xOutliers)
                 
-        # now that outliers have been dropped, calculate rolling 1-week average of y values (result of average is assigned to the centre of the window)
-        avg_window = pd.Timedelta(weeks=1)  # could also do pd.Timedelta(7, "d")
+        # now that outliers have been dropped, calculate rolling average of y values (result of average is assigned to the centre of the window)
+        avg_window = pd.Timedelta(window)  # could also do pd.Timedelta(7, "d")
         rolling_ser = concentration_data_xOutliers
         roll = rolling_ser.rolling(window=avg_window, min_periods=1, center=True)
         concentration_data_xOutliers_avg = roll.mean()
         
-        # plot 1-week rolling average
+        # plot rolling average
         self.__plot_data_xOutliers_fit(station_name=station_name, analyte_name=analyte_name, concentration_data_xOutliers=concentration_data_xOutliers,
                                        concentration_data_xOutliers_fit=concentration_data_xOutliers_avg, outliers=outliers, units=units, difference=difference, 
-                                       fitColor='green', fitName='Weekly Average', rm_outliers=rm_outliers, std_thresh=std_thresh,
+                                       fitColor='green', fitName=window+' Average', rm_outliers=rm_outliers, std_thresh=std_thresh,
                                        lowess_frac=lowess_frac, show_difference=show_difference, x_label=x_label, y_label=y_label,
                                        year_interval=year_interval, log_transform=log_transform, y_zoom=y_zoom, return_data=return_data,
                                        save=save, save_dir=save_dir, plot_inline=plot_inline, save_as_pdf=save_as_pdf)
@@ -2661,7 +2654,7 @@ class PylenmDataFactory(object):
                 return concentration_data_xOutliers, concentration_data_xOutliers_avg, outliers
             else:
                 return concentration_data_xOutliers, concentration_data_xOutliers_avg
-
+    
 
 
     ## by K. Whiteaker 2024-08, kwhit@alum.mit.edu
@@ -2683,7 +2676,7 @@ class PylenmDataFactory(object):
             log_transform (bool, optional): choose whether or not the data should be transformed to log base 10 values. Defaults to False
             y_zoom (bool, optional): if True, plot y axes will zoom in to [minimum y value, maximum y value] after removing outliers. Defaults to False
             return_data (bool, optional): if True, return the data used to make the plots. Defaults to False
-            save (bool, optional): if True, save lowess and weekly averaging plots to file in save_dir. Defaults to False
+            save (bool, optional): if True, save plots to file in save_dir. Defaults to False
             save_dir (str, optional): name of the directory you want to save the plot to. Defaults to 'plot_data_lowess'
             plot_inline (bool, optional): choose whether or not to show plot inline. Defaults to True
             save_as_pdf (bool, optional): if True, saves figure as vectorized pdf instead of png. Defaults to False
@@ -2735,7 +2728,7 @@ class PylenmDataFactory(object):
         # plot lowess fit
         self.__plot_data_xOutliers_fit(station_name=station_name, analyte_name=analyte_name, concentration_data_xOutliers=concentration_data_xOutliers,
                                        concentration_data_xOutliers_fit=concentration_data_xOutliers_lowess, outliers=outliers, units=units, difference=difference, 
-                                       fitColor='green', fitName='Weekly Average', rm_outliers=rm_outliers, std_thresh=std_thresh,
+                                       fitColor='violet', fitName='LOWESS Fit', rm_outliers=rm_outliers, std_thresh=std_thresh,
                                        lowess_frac=lowess_frac, show_difference=show_difference, x_label=x_label, y_label=y_label,
                                        year_interval=year_interval, log_transform=log_transform, y_zoom=y_zoom, return_data=return_data,
                                        save=save, save_dir=save_dir, plot_inline=plot_inline, save_as_pdf=save_as_pdf)
