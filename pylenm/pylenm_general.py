@@ -2440,3 +2440,271 @@ class PylenmDataFactory(object):
             distances.append(self.dist([x1,y1],[x2,y2]))
         XX[col_name] = distances
         return XX
+
+
+#######################################################################
+#######################################################################
+######### new functions 2024-08 #########
+
+    ## by K. Whiteaker 2024-08, kwhit@alum.mit.edu
+    def remove_outliers_lowess(self, data, lowess_frac=0.1, std_thresh=2.2, return_difference=False):
+        """Identifies outliers in time series data as deviations of std_thresh standard deviations from a LOWESS fit, then sets these outliers to np.nan
+    
+        Args:
+            data (pd.Series, or pd.DataFrame with 1 column): data for the outliers to removed from. MUST BE indexed by datetime (ex. collection date). Can convert pylenm concentration dataframe (for one station and one analyte) into a valid input via dataframe.set_index('COLLECTION_DATE').RESULT
+            lowess_frac (float, optional): fraction of total data points considered in local fits of LOWESS smoother. A smaller value captures more local behaviour, and may be required for large datasets. Defaults to 0.1
+            std_thresh (int, optional): number of standard deviations in (observation - fit) outside of which is considered an outlier. Defaults to 2.2
+            return_difference (bool, optional): if True, return a pd.Series containing the difference between data and lowess fit
+    
+        Returns:
+            if return_difference:
+                pd.Series: input data with outliers set to np.nan
+                pd.Series: input data - lowess fit
+            else:
+                pd.Series: input data with outliers set to np.nan
+        """
+
+        # create a copy so the data isn't modified inplace
+        working_data = data.copy()
+        
+        # lowess() reads datetime as nanoseconds and has issues with large numbers & low frac, so need to scale down x-axis during fitting
+        scaleDown = 1e17
+        x_data = pd.to_datetime(working_data.index)
+        x_readable = x_data.astype(int).to_numpy()/scaleDown
+        data_lowess = lowess(working_data, x_readable, frac=lowess_frac, return_sorted=False)
+
+        # identify outlier locations and mark them as nan
+        difference = working_data - data_lowess  # this is a pd.Series
+        thresh = std_thresh*np.std(difference)
+        difference_ignoreNaN = np.ma.array(difference, mask=np.isnan(difference)) # Use a mask to mark & ignore the NaNs as per https://stackoverflow.com/questions/37749900/how-to-disregard-the-nan-data-point-in-numpy-array-and-generate-the-normalized-d
+        outliers_iloc = np.where(np.abs(difference_ignoreNaN)>thresh)[0]
+        outliers = working_data.iloc[outliers_iloc]
+        working_data.iloc[outliers_iloc] = np.nan
+
+        #### debugging ####
+        # working_data.plot(style='.', title=working_data.name, ms=1)
+        # plt.show()
+        # difference.plot(style='.', title=working_data.name + ' difference', ms=1)
+        # difference.iloc[outliers_iloc].plot(style='x', ms=5)
+        # plt.show()
+        #### debugging ####
+
+        if return_difference:
+            return working_data, difference
+        else:
+            return working_data
+
+
+
+    ## by K. Whiteaker 2024-08, kwhit@alum.mit.edu
+    def plot_data_lowess(self, station_name, analyte_name, rm_outliers=True, std_thresh=2.2, lowess_frac=0.1, x_label=None, 
+                         y_label=None, year_interval=2, log_transform=False, y_zoom=False, return_data=False, save=False, save_dir='plot_data_lowess',
+                         plot_inline=True, save_as_pdf=False):
+        """Plot time series data for a specified station and analyte, alongside a smoothed curve on interpolated data points (LOWESS) and a curve calculated via 1-week window rolling average
+    
+        Args:
+            station_name (str): name of the station to be processed
+            analyte_name (str): name of the analyte to be processed
+            rm_outliers (bool, optional): if True, use lowess function to remove outliers. Defaults to True
+            std_thresh (int, optional): number of standard deviations in (observation - fit) outside of which is considered an outlier. Defaults to 2.2
+            lowess_frac (float, optional): fraction of total data points considered in local fits of LOWESS smoother. A smaller value captures more local behaviour, and may be required for large datasets. Defaults to 0.1
+            x_label (str, optional): x axis label. Defaults to None
+            y_label (str, optional): y axis label. Defaults to None. If left as None, will be set to analyte_name + f' [{units}]'
+            year_interval (int, optional): plot by how many years to appear in the axis e.g.(1 = every year, 5 = every 5 years, ...). Defaults to 2
+            log_transform (bool, optional): choose whether or not the data should be transformed to log base 10 values. Defaults to False
+            y_zoom (bool, optional): if True, plot y axes will zoom in to [minimum y value, maximum y value] after removing outliers. Defaults to False
+            return_data (bool, optional): if True, return the data used to make the plots. Defaults to False
+            save (bool, optional): if True, save lowess and weekly averaging plots to file in save_dir. Defaults to False
+            save_dir (str, optional): name of the directory you want to save the plot to. Defaults to 'plot_data_lowess'
+            plot_inline (bool, optional): choose whether or not to show plot inline. Defaults to True
+            save_as_pdf (bool, optional): if True, saves figure as vectorized pdf instead of png. Defaults to False
+    
+        Returns:
+            if return_data:
+                if rm_outliers:
+                    pd.Series: concentration data with outliers set to np.nan, indexed by date
+                    pd.Series: LOWESS fit of post-outlier-removal concentration data, indexed by date
+                    pd.Series: 1-week rolling average of post-outlier-removal concentration data, indexed by date
+                    pd.Series: outliers, indexed by date
+                else:
+                    pd.Series: concentration data, indexed by date
+                    pd.Series: LOWESS fit of concentration data, indexed by date
+                    pd.Series: 1-week rolling average of concentration data, indexed by date
+            else:
+                None
+        """
+    
+        # import data and filter for the chosen analyte
+        query = self.query_data(station_name, analyte_name)
+        query = self.simplify_data(data=query)
+        if(type(query)==int and query == 0):
+            return 'No results found for {} and {}'.format(station_name, analyte_name)
+        
+        # reshape data so it can be passed into lowess() and remove_outliers_lowess()
+        concentration_data = query.set_index('COLLECTION_DATE').RESULT
+        time_data = concentration_data.index
+        units = query.RESULT_UNITS.values[0]  # assumes same units for every entry
+        if(log_transform):
+            concentration_data = concentration_data.apply(np.log10)
+
+        # if rm_outliers toggled, call remove_outliers_lowess() to set outliers to np.nan via lowess fit
+        if rm_outliers:
+            concentration_data_xOutliers, difference = self.remove_outliers_lowess(concentration_data, lowess_frac=lowess_frac, std_thresh=std_thresh, return_difference=True)
+        else:
+            concentration_data_xOutliers = concentration_data
+        outliers_loc = concentration_data_xOutliers.compare(concentration_data).index  # dates at which outliers occurred
+        outliers = concentration_data[outliers_loc]  # outlier values indexed by their date of occurrence
+        num_outliers = outliers.size
+        analyte_max_xOutliers, analyte_min_xOutliers = max(concentration_data_xOutliers), min(concentration_data_xOutliers)
+                
+        # now that outliers have been dropped, calculate a new lowess fit for plotting
+        # lowess() reads datetime as nanoseconds and has issues with large numbers & low frac, so need to scale down x-axis during fitting
+        scaleDown = 1e17
+        x_readable = time_data.to_numpy().astype(int)/scaleDown
+        y_data_lowess = lowess(concentration_data_xOutliers, x_readable, frac=lowess_frac, return_sorted=False)
+        concentration_data_xOutliers_lowess = pd.Series(data=y_data_lowess, index=concentration_data_xOutliers.index, dtype=float, name=concentration_data_xOutliers.name)
+        
+        # calculate rolling 1-week average of y values (result of average is assigned to the centre of the window)
+        avg_window = pd.Timedelta(weeks=1)  # could also do pd.Timedelta(7, "d")
+        rolling_ser = concentration_data_xOutliers
+        roll = rolling_ser.rolling(window=avg_window, min_periods=1, center=True)
+        concentration_data_xOutliers_avg = roll.mean()
+
+        # plot lowess fit and 1-week rolling average
+        # copied from self.plot_data(), with a few additional plot items added
+        for conc_data_pkg in [[concentration_data_xOutliers_lowess, 'violet', 'LOWESS fit'], [concentration_data_xOutliers_avg, 'green', 'Weekly Average']]:
+            plt.figure(figsize=(8,8))
+            ax = plt.axes()
+            years = mdates.YearLocator(year_interval)  # every year
+            months = mdates.MonthLocator()  # every month
+            yearsFmt = mdates.DateFormatter('%Y')
+            for label in ax.get_xticklabels():
+                label.set_rotation(30)
+                label.set_horizontalalignment('center')
+            ax = plt.gca()
+            ax.xaxis.set_major_locator(years)
+            ax.xaxis.set_major_formatter(yearsFmt)
+            ax.autoscale_view()
+    
+            ax.set_title(str(station_name) + ' - ' + analyte_name, fontweight='bold')
+            ttl = ax.title
+            ttl.set_position([.5, 1.05])
+            if y_label is None:
+                y_label = analyte_name + f' [{units}]'
+                if(log_transform):
+                    y_label = 'log_10 of ' + analyte_name + f' [{units}]'
+            ax.set_ylabel(y_label)
+            ax.set_xlabel(x_label)
+            small_fontSize = 15
+            large_fontSize = 20
+            plt.rc('axes', titlesize=large_fontSize)
+            plt.rc('axes', labelsize=large_fontSize)
+            plt.rc('legend', fontsize=small_fontSize)
+            plt.rc('xtick', labelsize=small_fontSize)
+            plt.rc('ytick', labelsize=small_fontSize)
+            ax.plot(concentration_data_xOutliers.index, concentration_data_xOutliers, ls='', marker='o', ms=2, color='black', alpha=1)
+            if rm_outliers:
+                ax.plot(outliers.index, outliers, ls='', marker='x', ms=5, color='red', alpha=0.75, label="Outliers ({})".format(num_outliers))
+            # need to use pd.Series.dropna() when plotting so that matplotlib doesn't insert any gaps
+            ax.plot(conc_data_pkg[0].dropna().index, conc_data_pkg[0].dropna(), ls='-', marker='', ms=2, lw=1, color=conc_data_pkg[1], alpha=1, label=conc_data_pkg[2])
+            if y_zoom:
+                plt.ylim(analyte_min_xOutliers, analyte_max_xOutliers)
+            ax.legend(bbox_to_anchor=(1.04, 1), loc='upper left', borderaxespad=0.)
+            props = dict(boxstyle='round', facecolor='grey', alpha=0.15)
+            ax.text(1.05, 0.85, 'Samples: {}'.format(concentration_data_xOutliers.size), transform=ax.transAxes, 
+                    fontsize=small_fontSize,
+                    fontweight='bold',
+                    verticalalignment='top', 
+                    bbox=props)
+            if save_as_pdf:
+                fileType = '.pdf'
+            else:
+                fileType = '.png'
+            if save:
+                if not os.path.exists(save_dir):
+                    os.makedirs(save_dir)
+                plt.savefig(save_dir + '/' + str(station_name) + '_' + analyte_name + '_' + conc_data_pkg[2].replace(" ", "") + fileType, bbox_inches="tight")
+            if(plot_inline):
+                plt.show()
+            plt.clf()
+            plt.cla()
+            plt.close()
+
+        # plot difference between fit and observation, with outliers marked
+        if rm_outliers:
+            plt.scatter(difference.index, difference, s=0.5, label='Difference')
+            plt.scatter(difference[outliers_loc].index, difference[outliers_loc], s=10, marker='x', label=f'Outliers outside {std_thresh} SD')
+            plt.title("(obs - fit), fraction "+ str(lowess_frac) + ", station "+ str(station_name))
+            plt.ylabel('Observation - LOWESS Fit [ft]')
+            plt.legend()
+            if save:
+                plt.savefig(save_dir + '/' + str(station_name) + '_' + analyte_name + '_difference' + fileType, bbox_inches="tight")
+            if(plot_inline):
+                plt.show()
+            plt.clf()
+            plt.cla()
+            plt.close()
+        
+        if return_data:
+            if rm_outliers:
+                return concentration_data_xOutliers, concentration_data_xOutliers_lowess, concentration_data_xOutliers_avg, outliers
+            else:
+                return concentration_data_xOutliers, concentration_data_xOutliers_lowess, concentration_data_xOutliers_avg
+
+
+
+    ## by K. Whiteaker, kwhit@alum.mit.edu
+    def time_average_all_stations(self, analyte, period='1W', rm_outliers=True, std_thresh=2.2, lowess_frac=0.1):
+        """Transforms all analyte data from exact measurements, at potentially different dates for each station, into periodic averaged data (ex. weekly averages) at the same dates for all stations.
+    
+        Args:
+            analyte (_type_): analyte name
+            period (str, optional): {‘D’, ‘W’, ‘M’, ‘Y’} time period over which to average. See https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html for valid frequency inputs. (e.g. ‘2W’ = every 2 weeks). Defaults to '1W'
+            rm_outliers (bool, optional): flag to remove outliers in the data via LOWESS fit. Defaults to True
+            std_thresh (int, optional): number of standard deviations in (observation - fit) outside of which is considered an outlier. Defaults to 2.2
+            lowess_frac (float, optional): fraction of total data points considered in local fits of LOWESS smoother. A smaller value captures more local behaviour, and may be required for large datasets. Defaults to 0.1
+    
+        Returns:
+            pd.DataFrame: dataframe with columns = stations, rows = dates, and data representing the average for that station between each date
+        """
+        ## import data and filter for the chosen analyte
+        data_concentration = self.data
+        data_concentration = data_concentration[data_concentration.ANALYTE_NAME == analyte]
+        data_construction = self.construction_data
+    
+        ## create reshaped_df with columns=all available stations and rows=all measurement dates, to iterate over when conducting periodic averaging
+        stations = np.unique(data_concentration[data_concentration.ANALYTE_NAME == analyte].STATION_ID)
+        times = pd.to_datetime(np.unique(data_concentration.COLLECTION_DATE))
+        reshaped_df = pd.DataFrame(index=times, columns=stations)
+        
+        ## remove outliers from each station's data using remove_outlier_lowess(), and save the remaining data in reshaped_df
+        for station in stations:
+            data_in = data_concentration[data_concentration.STATION_ID == station].set_index('COLLECTION_DATE').RESULT
+            data_in.index = pd.to_datetime(data_in.index)
+            if rm_outliers:
+                data_xOutliers = self.remove_outliers_lowess(data_in, lowess_frac, std_thresh)
+            else:
+                data_xOutliers = data_in
+            reshaped_df[station].loc[data_xOutliers.index] = data_xOutliers
+        
+        ## find first and last measurement dates
+        date_start = pd.Timestamp(times.min())
+        date_end = pd.Timestamp(times.max())
+        ## make an array of datetimes, 1 period (ex. 1 week) apart, that spanning from before the first measurement date to after the last measurement date
+        period_timesteps = pd.date_range(min(times) - pd.Timedelta(period), max(times) + pd.Timedelta(period), freq=period).to_numpy()
+    
+        ## conduct periodic averaging: take periodic (ex. 1 week) averages of each station and save the result to averaged_df
+        averaged_df = pd.DataFrame(index=period_timesteps, columns=stations,dtype=float)
+        for period_step in range(period_timesteps.size-1):  # for each period...
+            # if period_step%100==0:
+            #     print(period_step)  # print progress
+            period_step_bin = []
+            relevant_times = times[(times > period_timesteps[period_step]) & (times < period_timesteps[period_step+1])]
+            for relevant_time in relevant_times:  # for each existing measurement that occurred within this period...
+                timestep_data = reshaped_df.loc[relevant_time]  # identify all data points at this timestep
+                period_step_bin.append(timestep_data)
+            if len(period_step_bin)>0:  # if there are any measurements in this period
+                period_data = pd.concat(period_step_bin, axis=1)
+                period_station_avg = period_data.mean(axis=1, skipna=True)  # for each station, take the average over this period
+                averaged_df.loc[period_timesteps[period_step]] = period_station_avg
+        return averaged_df
