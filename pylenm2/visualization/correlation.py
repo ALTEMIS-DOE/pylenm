@@ -1,7 +1,45 @@
-def plot_corr_by_well(self, well_name, analytes, remove_outliers=True, z_threshold=4, interpolate=False, frequency='2W', save_dir='plot_correlation', log_transform=False, fontsize=20, returnData=False, remove=[], no_log=None):
+import os
+import numpy as np
+import pandas as pd
+import seaborn as sns
+from matplotlib import pyplot as plt
+
+import pylenm2
+from pylenm2.stats import preprocess
+from pylenm2.data import transformation
+from pylenm2.visualization import plots
+from pylenm2.utils import constants as c
+
+import logging
+from pylenm2 import logger_config
+
+plot_corr_logger = logger_config.setup_logging(
+    module_name=__name__,
+    # level=logging.INFO,
+    level=logging.DEBUG,
+    logfile_dir=c.LOGFILE_DIR,
+)
+
+
+def plot_corr_by_well(
+        data_pylenm_dm, 
+        well_name, 
+        analytes, 
+        remove_outliers=True, 
+        z_threshold=4, 
+        interpolate=False, 
+        frequency='2W', 
+        save_dir='plot_correlation', 
+        log_transform=False, 
+        fontsize=20, 
+        returnData=False, 
+        remove=[], 
+        no_log=None,
+    ):
     """Plots the correlations with the physical plots as well as the correlations of the important analytes over time for a specified well.
 
     Args:
+        data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
         well_name (str): name of the well to be processed
         analytes (list): list of analyte names to use
         remove_outliers (bool, optional): choose whether or to remove the outliers. Defaults to True.
@@ -18,13 +56,15 @@ def plot_corr_by_well(self, well_name, analytes, remove_outliers=True, z_thresho
     Returns:
         None
     """
-    data = self.data
+    data = data_pylenm_dm.data
     query = data[data.STATION_ID == well_name]
     a = list(np.unique(query.ANALYTE_NAME.values))# get all analytes from dataset
+    
     for value in analytes:
         if((value in a)==False):
             return 'ERROR: No analyte named "{}" in data.'.format(value)
     analytes = sorted(analytes)
+    
     query = query.loc[query.ANALYTE_NAME.isin(analytes)]
     x = query[['COLLECTION_DATE', 'ANALYTE_NAME']]
     unique = ~x.duplicated()
@@ -34,18 +74,30 @@ def plot_corr_by_well(self, well_name, analytes, remove_outliers=True, z_thresho
     piv.index = pd.to_datetime(piv.index)
     totalSamples = piv.shape[0]
     piv = piv.dropna()
+    
     if(interpolate):
-        piv = self.interpolate_well_data(well_name, analytes, frequency=frequency)
-        file_extension = '_interpolated_' + frequency
-        title = well_name + '_correlation - interpolated every ' + frequency
+        piv = transformation.interpolate_well_data(
+            data_pylenm_dm=data_pylenm_dm,
+            well_name=well_name, 
+            analytes=analytes, 
+            frequency=frequency,
+        )
+        # file_extension = '_interpolated_' + frequency
+        file_extension = f"_interpolated_{frequency}"
+        # title = well_name + '_correlation - interpolated every ' + frequency
+        title = f"{well_name}_correlation - interpolated every {frequency}"
     else:
-        file_extension = '_correlation'
-        title = well_name + '_correlation'
+        file_extension = "_correlation"
+        # title = well_name + '_correlation'
+        title = f"{well_name}_correlation"
     samples = piv.shape[0]
+    
     if(samples < 5):
         if(interpolate):
-            return 'ERROR: {} does not have enough samples to plot.\n Try a different interpolation frequency'.format(well_name)
-        return 'ERROR: {} does not have enough samples to plot.'.format(well_name)
+            # return 'ERROR: {} does not have enough samples to plot.\n Try a different interpolation frequency'.format(well_name)
+            return f"ERROR: {well_name} does not have enough samples to plot.\n Try a different interpolation frequency"
+        # return 'ERROR: {} does not have enough samples to plot.'.format(well_name)
+        return f"ERROR: {well_name} does not have enough samples to plot."
     else:
         # scaler = StandardScaler()
         # pivScaled = scaler.fit_transform(piv)
@@ -63,7 +115,8 @@ def plot_corr_by_well(self, well_name, analytes, remove_outliers=True, z_thresho
 
         # Remove outliers
         if(remove_outliers):
-            piv = self.remove_outliers(piv, z_threshold=z_threshold)
+            piv = preprocess.remove_outliers(piv, z_threshold=z_threshold)
+
         samples = piv.shape[0]
 
         idx = piv.index.date
@@ -73,28 +126,75 @@ def plot_corr_by_well(self, well_name, analytes, remove_outliers=True, z_thresho
         
         sns.set_style("white", {"axes.facecolor": "0.95"})
         g = sns.PairGrid(piv, aspect=1.2, diag_sharey=False, despine=False)
-        g.fig.suptitle(title, fontweight='bold', y=1.08, fontsize=25)
-        g.map_lower(sns.regplot, lowess=True, ci=False, line_kws={'color': 'red', 'lw': 3},
-                                                        scatter_kws={'color': 'black', 's': 20})
-        g.map_diag(sns.distplot, kde_kws={'color': 'black', 'lw': 3}, hist_kws={'histtype': 'bar', 'lw': 2, 'edgecolor': 'k', 'facecolor':'grey'})
-        g.map_upper(self.__plotUpperHalf)
+        g.figure.suptitle(title, fontweight='bold', y=1.08, fontsize=25)
+        g.map_lower(
+            sns.regplot, 
+            lowess=True, 
+            ci=False, 
+            line_kws={'color': 'red', 'lw': 3}, 
+            scatter_kws={'color': 'black', 's': 20},
+        )
+        # g.map_diag(
+        #     sns.distplot, 
+        #     kde_kws={'color': 'black', 'lw': 3}, 
+        #     hist_kws={'histtype': 'bar', 'lw': 2, 'edgecolor': 'k', 'facecolor':'grey'},
+        # )   # NOTE: Replacing with `sns.histplot` because `sns.distplot` is deprecated.
+        g.map_diag(
+            sns.histplot, 
+            stat="density",
+            color="black",
+            element="bars",
+            edgecolor="dimgray",
+            facecolor="lightgray",
+            lw=2,
+            kde=True, 
+            kde_kws=dict(cut=3),
+            line_kws=dict(color="black", lw=3),
+        )
+
+        g.map_upper(plots._plotUpperHalf)
+
         for ax in g.axes.flat:
             ax.tick_params("y", labelrotation=0, labelsize=fontsize)
-            ax.set_xticklabels(ax.get_xticklabels(), rotation=45, fontsize=fontsize)
-            ax.set_xlabel(ax.get_xlabel(), fontsize=fontsize, fontweight='bold') #HERE
-            ax.set_ylabel(ax.get_ylabel(), fontsize=fontsize,fontweight='bold')
+            ax.set_xticklabels(
+                ax.get_xticklabels(), rotation=45, fontsize=fontsize,
+            )
+            ax.set_xlabel(
+                ax.get_xlabel(), fontsize=fontsize, fontweight='bold',
+            )
+            ax.set_ylabel(
+                ax.get_ylabel(), fontsize=fontsize,fontweight='bold',
+            )
             
-        g.fig.subplots_adjust(wspace=0.3, hspace=0.3)
+        g.figure.subplots_adjust(wspace=0.3, hspace=0.3)
         ax = plt.gca()
 
         props = dict(boxstyle='round', facecolor='grey', alpha=0.15)
-        ax.text(1.3, 6.2, 'Start date:  {}\nEnd date:    {}\n\nOriginal samples:     {}\nSamples used:     {}'.format(piv.index[0].date(), piv.index[-1].date(), totalSamples, samples), transform=ax.transAxes, fontsize=20, fontweight='bold', verticalalignment='bottom', bbox=props)
+        ax.text(
+            1.3, 
+            6.2, 
+            # 'Start date:  {}\nEnd date:    {}\n\nOriginal samples:     {}\nSamples used:     {}'.format(piv.index[0].date(), piv.index[-1].date(), totalSamples, samples), 
+            f"{'Start date:':<12} {str(piv.index[0].date())}\n{'End date:':<12} {str(piv.index[-1].date())}\n\n{'Original samples:':<20} {totalSamples}\n{'Samples used:':<20} {samples}",
+            transform=ax.transAxes, 
+            fontsize=20, 
+            fontweight='bold', 
+            verticalalignment='bottom', 
+            bbox=props,
+        )
+        
         # Add titles to the diagonal axes/subplots
         for ax, col in zip(np.diag(g.axes), piv.columns):
             ax.set_title(col, y=0.82, fontsize=15)
+        
+        # Save figure (if specified)
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
-        g.fig.savefig(save_dir + '/' + well_name + file_extension + '.png', bbox_inches="tight")
+        g.figure.savefig(
+            # save_dir + '/' + well_name + file_extension + '.png', 
+            f"{save_dir}/{well_name}{file_extension}.png", 
+            bbox_inches="tight",
+        )
+        
         if(returnData):
             return piv
         
