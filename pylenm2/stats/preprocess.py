@@ -1,6 +1,19 @@
 import numpy as np
 import scipy.stats as stats
 
+from pylenm2.utils import constants as c
+
+import logging
+from pylenm2 import logger_config
+
+preprocess_logger = logger_config.setup_logging(
+    module_name=__name__,
+    # level=logging.INFO,
+    level=logging.DEBUG,
+    logfile_dir=c.LOGFILE_DIR,
+)
+
+
 
 # Helper function for plot_correlation
 # Sorts analytes in a specific order: 'TRITIUM', 'URANIUM-238','IODINE-129','SPECIFIC CONDUCTANCE', 'PH', 'DEPTH_TO_WATER'
@@ -30,11 +43,15 @@ def remove_outliers(
         nan_policy="omit",
     ):
     """Removes outliers from a dataframe based on the z_scores and returns the new dataframe.
+    NOTE: The new logic is not same as the previous logic. 
+        As per the new logic, it sets NA for the values that are greater than 
+        z_threshold, whereas, in the previous logic, all the rows containing 
+        even a single column of z > threshold are dropped.
 
     Args:
         data (pd.DataFrame): data for the outliers to removed from
         z_threshold (int, optional): z_score threshold to eliminate. Values above this threshold are elimited. Defaults to 4. 
-            NOTE: Get it confirmed by the @Zexuan and @Haruko.
+            NOTE: Get the threshold and logic confirmed by the @Zexuan and @Haruko.
         nan_policy (str, optional): specifies how to handle `nan` values. Passed in the stats.zscore() function.
             Options are one of:
                 'propagate': returns nan.
@@ -53,7 +70,7 @@ def remove_outliers(
     # data = data.drop(data.index[row_loc])
     # data = data[z <= z_threshold]
     data[z > z_threshold] = np.nan
-    
+
     return data
 
 

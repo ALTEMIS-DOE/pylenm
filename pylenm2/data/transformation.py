@@ -115,6 +115,7 @@ def _transform_time_series(
     ) -> Tuple[pd.DataFrame, pd.DatetimeIndex]:
     """<Function docstring> TODO: write function docstring.
     TODO: The function can be optimized a lot for a faster performance. Come back to this once everything is done.
+    TODO: Get the logic confirmed by Zexuan.
 
     Args:
         data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
