@@ -19,14 +19,29 @@ plots_logger = logger_config.setup_logging(
 )
 
 
-def __plotUpperHalf(self, *args, **kwargs):
-    corr_r = args[0].corr(args[1], 'pearson')
+# def _plotUpperHalf(*args, **kwargs):
+def _plotUpperHalf(x_data, y_data, *args, **kwargs):   # TODO: confirm that this change does not break any other function.
+    """<Function docstring>
+    TODO: Complete the function docstring.
+
+    Args:
+        x_data (pd.Series): X-axis data.
+        y_data (pd.Series): Y-axis data.
+        args (Tuple): Tuple of positional arguments.
+        kwargs (Dict): Dictionary of keyword arguments.
+    """
+
+    # corr_r = args[0].corr(args[1], 'pearson')
+    corr_r = x_data.corr(y_data, 'pearson')
     corr_text = f"{corr_r:2.2f}"
+    
     ax = plt.gca()
     ax.set_axis_off()
+    
     marker_size = abs(corr_r) * 10000
     ax.scatter([.5], [.5], marker_size, [corr_r], alpha=0.6, cmap="coolwarm",
                 vmin=-1, vmax=1, transform=ax.transAxes)
+    
     font_size = abs(corr_r) * 40 + 5
     ax.annotate(corr_text, [.5, .48,],  xycoords="axes fraction", # [.5, .48,]
                 ha='center', va='center', fontsize=font_size, fontweight='bold')
