@@ -47,6 +47,7 @@ def remove_outliers(
         As per the new logic, it sets NA for the values that are greater than 
         z_threshold, whereas, in the previous logic, all the rows containing 
         even a single column of z > threshold are dropped.
+    TODO: Confirm if this change is okay or if we need to revert back to the previous implementation. @Zexuan
 
     Args:
         data (pd.DataFrame): data for the outliers to removed from
@@ -63,13 +64,16 @@ def remove_outliers(
         pd.DataFrame: data with outliers removed
     """
 
+    # Old implementation
     z = np.abs(stats.zscore(data, nan_policy=nan_policy))
-    # row_loc = np.unique(np.where(z > z_threshold)[0])
+    row_loc = np.unique(np.where(z > z_threshold)[0])
     
     # Setting values outside threshold to `nan` values.
-    # data = data.drop(data.index[row_loc])
-    # data = data[z <= z_threshold]
-    data[z > z_threshold] = np.nan
+    data = data.drop(data.index[row_loc])
+
+    # # New implementation
+    # z = np.abs(stats.zscore(data, nan_policy=nan_policy))
+    # data[z > z_threshold] = np.nan
 
     return data
 
