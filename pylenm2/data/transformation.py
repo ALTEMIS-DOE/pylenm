@@ -48,7 +48,6 @@ def interpolate_well_data(
         series.COLLECTION_DATE = pd.to_datetime(series.COLLECTION_DATE)
         series.index = series.COLLECTION_DATE
         original_dates = series.index
-        breakpoint()
         series = series.drop('COLLECTION_DATE', axis=1)
         series = series.rename({'RESULT': analyte}, axis=1)
         upsampled = series.resample(frequency).mean()
