@@ -2,6 +2,8 @@ import os
 import pandas as pd
 
 import pylenm2
+import pylenm2.data
+import pylenm2.data.data_module
 from pylenm2.utils import constants as c
 
 import logging
@@ -45,7 +47,7 @@ def simplify_data(
     #     data = data
     if isinstance(data, pd.DataFrame):
         data_df = data.copy(deep=True)
-    elif isinstance(data, pylenm2.PylenmDataModule):
+    elif isinstance(data, pylenm2.PylenmDataModule, pylenm2.data.data_module.PylenmDataModule):
         data_df = data.data.copy(deep=True)
     else:
         filters_logger.error("`data` must be either a pandas DataFrame or PylenmDataModule!")
@@ -85,7 +87,7 @@ def simplify_data(
             data.drop(columns=list(set(data.columns).difference(sel_cols)), inplace=True)
             data[sel_cols] = data_df[sel_cols]
     
-        elif isinstance(data, pylenm2.PylenmDataModule):
+        elif isinstance(data, pylenm2.PylenmDataModule, pylenm2.data.data_module.PylenmDataModule):
             data.setData(data_df, verbose=False)
         
         else:
