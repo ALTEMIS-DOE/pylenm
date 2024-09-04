@@ -172,6 +172,11 @@ class PylenmDataModule(object):
     def set_jointData(self, data, lag):
         self.__jointData[0] = data
         self.__jointData[1] = lag
+
+    
+    @property
+    def jointData(self):
+        return self.__jointData
     
 
     # def jointData_is_set(self, lag):
