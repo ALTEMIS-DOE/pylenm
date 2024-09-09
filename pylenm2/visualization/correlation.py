@@ -660,7 +660,7 @@ def plot_corr_by_year(
             # 3, 
             6.2, 
             # 'Date:  {}\n\nSamples used:     {}'.format(year, samples), 
-            f"Date: {year}\n\nSamples used: {samples}",
+            f"Year: {year}\n\nSamples used: {samples}",
             transform=ax.transAxes, 
             fontsize=fontsize, 
             fontweight='bold', 
