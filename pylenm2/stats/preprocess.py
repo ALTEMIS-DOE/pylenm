@@ -40,14 +40,18 @@ def get_MCL(self, analyte_name):
 def remove_outliers(
         data, 
         z_threshold=4,
-        nan_policy="omit",
+        nan_policy="propagate",     # same as the default of stats.zscore()
     ):
     """Removes outliers from a dataframe based on the z_scores and returns the new dataframe.
     NOTE: The new logic is not same as the previous logic. 
         As per the new logic, it sets NA for the values that are greater than 
         z_threshold, whereas, in the previous logic, all the rows containing 
-        even a single column of z > threshold are dropped.
+        even a single column of z > threshold are dropped (and then NaNs are added internally for whatever rows are dropped.)
     TODO: Confirm if this change is okay or if we need to revert back to the previous implementation. @Zexuan
+    
+    TODO: REWRITE!!! 
+        REMOVE `nan_policy`.
+        TEST AGAIN AFTER REWRITING TO MAKE SURE THAT THE OUTPUTS MATCH.
 
     Args:
         data (pd.DataFrame): data for the outliers to removed from
@@ -69,7 +73,8 @@ def remove_outliers(
     row_loc = np.unique(np.where(z > z_threshold)[0])
     
     # Setting values outside threshold to `nan` values.
-    data = data.drop(data.index[row_loc])
+    # data = data.drop(data.index[row_loc])
+    data = data.drop(data.index[row_loc]).reindex(data.index)     # NOTE: Reindexing is necessary to make sure that the size mismatch is handled by adding `NaN` values for the dropped rows.
 
     # # New implementation
     # z = np.abs(stats.zscore(data, nan_policy=nan_policy))
