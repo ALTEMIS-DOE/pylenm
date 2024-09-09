@@ -1,4 +1,14 @@
-def plot_coordinates_to_map(self, gps_data, center=[33.271459, -81.675873], zoom=14) -> Map:
+from ipywidgets import HTML
+from ipyleaflet import (Map, basemaps, Marker,FullScreenControl, 
+                        Popup, AwesomeIcon) 
+
+
+def plot_coordinates_to_map(
+        # self, 
+        gps_data, 
+        center=[33.271459, -81.675873], 
+        zoom=14,
+    ) -> Map:
     """Plots the well locations on an interactive map given coordinates.
 
     Args:
@@ -9,13 +19,21 @@ def plot_coordinates_to_map(self, gps_data, center=[33.271459, -81.675873], zoom
     Returns:
         ipyleaflet.Map
     """
-    center = center
-    zoom = 14
-    m = Map(basemap=basemaps.Esri.WorldImagery, center=center, zoom=zoom)
+
+    # center = center
+    # zoom = 14
+
+    # Create the basemap
+    m = Map(
+        basemap=basemaps.Esri.WorldImagery, 
+        center=center, 
+        zoom=zoom,
+    )
 
     m.add_control(FullScreenControl())
     for (index,row) in gps_data.iterrows():
 
+        # Create icons for stations locations
         if('color' in gps_data.columns):
             icon = AwesomeIcon(
                 name='tint',
@@ -34,17 +52,27 @@ def plot_coordinates_to_map(self, gps_data, center=[33.271459, -81.675873], zoom
         loc = [row.loc['LATITUDE'],row.loc['LONGITUDE']]
         station = HTML(value=row.loc['STATION_ID'])
 
+        # Create the Popup
+        popup = Popup(
+            location=loc,
+            child=station,
+            close_button=True,
+            auto_close=False,
+            max_height=1,
+            close_on_escape_key=False,
+        )
+        
+        # Create the Marker and add the Popup to it
         marker = Marker(location=loc,
                         icon=icon,
                         draggable=False,
+                        popup=popup,
                     )
 
         m.add_layer(marker)
 
-        popup = Popup(child=station,
-                        max_height=1)
 
-        marker.popup = popup
+        # marker.popup = popup
 
     return m
 
