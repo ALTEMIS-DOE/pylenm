@@ -47,7 +47,7 @@ def simplify_data(
     #     data = data
     if isinstance(data, pd.DataFrame):
         data_df = data.copy(deep=True)
-    elif isinstance(data, pylenm2.PylenmDataModule, pylenm2.data.data_module.PylenmDataModule):
+    elif isinstance(data, (pylenm2.PylenmDataModule, pylenm2.data.data_module.PylenmDataModule)):
         data_df = data.data.copy(deep=True)
     else:
         filters_logger.error("`data` must be either a pandas DataFrame or PylenmDataModule!")
@@ -87,8 +87,8 @@ def simplify_data(
             data.drop(columns=list(set(data.columns).difference(sel_cols)), inplace=True)
             data[sel_cols] = data_df[sel_cols]
     
-        elif isinstance(data, pylenm2.PylenmDataModule, pylenm2.data.data_module.PylenmDataModule):
-            data.setData(data_df, verbose=False)
+        elif isinstance(data, (pylenm2.PylenmDataModule, pylenm2.data.data_module.PylenmDataModule)):
+            data.set_data(data_df, verbose=False)
         
         else:
             raise pylenm2.UnreachableCodeError("Code execution should never reach here!")
@@ -109,30 +109,36 @@ def filter_by_column(data, col, equals=[]):
     Returns:
         pd.DataFrame: returns filtered dataframe
     """
-    if(data is None):
+    if (data is None):
         filters_logger.error('ERROR: DataFrame was not provided to this function.')
-        return 'ERROR: DataFrame was not provided to this function.'
+        # return 'ERROR: DataFrame was not provided to this function.'
+        return None
     else:
         # if(str(type(data)).lower().find('dataframe') == -1):
         if not isinstance(data, pd.DataFrame):
             filters_logger.error('ERROR: Data provided is not a pandas DataFrame.')
-            return 'ERROR: Data provided is not a pandas DataFrame.'
+            # return 'ERROR: Data provided is not a pandas DataFrame.'
+            return None
         else:
             data = data
     
     # DATA VALIDATION
-    if(col==None):
+    if (col==None):
         filters_logger.error('ERROR: Specify a column name to filter by.')
-        return 'ERROR: Specify a column name to filter by.'
+        # return 'ERROR: Specify a column name to filter by.'
+        return None
 
     # data_cols = list(data.columns)
     # if((col in data_cols)==False): # Make sure column name exists 
     if col not in data.columns: # Make sure column name exists 
         filters_logger.error(f'Error: Column name {col} does not exist')
-        return 'Error: Column name "{}" does not exist'.format(col)
+        # return 'Error: Column name "{}" does not exist'.format(col)
+        return None
     
-    if(equals==[]):
-        return 'ERROR: Specify a value that "{}" should equal to'.format(col)
+    if (equals==[]):
+        filters_logger.error(f"ERROR: Specify a value that {col} should equal to.")
+        # return 'ERROR: Specify a value that "{}" should equal to'.format(col)
+        return None
     
     # data_val = list(data[col])
     # for value in equals:
@@ -141,7 +147,8 @@ def filter_by_column(data, col, equals=[]):
     values_not_in_data = set(equals).difference(set(data[col]))
     if len(values_not_in_data) > 0:
         filters_logger.error(f'ERROR: {values_not_in_data} do not exist in {col}.')
-        return f'ERROR: {values_not_in_data} do not exist in {col}.'
+        # return f'ERROR: {values_not_in_data} do not exist in {col}.'
+        return None
 
     # QUERY
     # final_data = pd.DataFrame()
