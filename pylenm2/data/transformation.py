@@ -138,15 +138,14 @@ def _transform_time_series(
         """
         # wells_analyte = np.unique(data[data.ANALYTE_NAME == analyte_name].STATION_ID)
 
-        # all_dates = np.unique(data.COLLECTION_DATE)
-        # Create array of equally spaced dates
-        start_date = pd.Timestamp(data.COLLECTION_DATE.min())
-        end_date = pd.Timestamp(data.COLLECTION_DATE.max())
-        date_delta = (end_date - start_date) + pd.Timedelta(days=1)    # to include the end date as well
-        t = np.linspace(start_date.value, end_date.value, date_delta.days)
-        t = pd.to_datetime(t).date
-        # t = pd.Series(t)
-        # t = t.apply(lambda x: x.replace(minute=0, hour=0, second=0, microsecond=0, nanosecond=0))
+        # # Create array of equally spaced dates
+        # start_date = pd.Timestamp(data.COLLECTION_DATE.min())
+        # end_date = pd.Timestamp(data.COLLECTION_DATE.max())
+        # date_delta = (end_date - start_date) + pd.Timedelta(days=1)    # to include the end date as well
+        # t = np.linspace(start_date.value, end_date.value, date_delta.days)
+        # t = pd.to_datetime(t).date
+        # # t = pd.Series(t)
+        # # t = t.apply(lambda x: x.replace(minute=0, hour=0, second=0, microsecond=0, nanosecond=0))
 
         # condensed = data[data.ANALYTE_NAME == analyte_name].groupby(['STATION_ID','COLLECTION_DATE']).mean()    # NOTE: Breaks the code
         # condensed = data[data.ANALYTE_NAME == analyte_name].groupby(['STATION_ID','COLLECTION_DATE'])['RESULT'].mean().to_frame('RESULT')     # NOTE: Works. Result must have (well, date) as index
@@ -166,10 +165,12 @@ def _transform_time_series(
         return analyte_df_resample
 
 
-    data_analyte_groups = data.groupby("ANALYTE_NAME", as_index=False)
-    transformed_ts_data_analyte = data_analyte_groups.apply(
-        lambda subdf: transform_time_series_by_analyte(data=subdf, analyte_name=subdf.ANALYTE_NAME.iloc[0])
-    )
+    # data_analyte_groups = data.groupby("ANALYTE_NAME", as_index=False)
+    # transformed_ts_data_analyte = data_analyte_groups.apply(
+    #     lambda subdf: transform_time_series_by_analyte(
+    #         data=subdf, analyte_name=subdf.ANALYTE_NAME.iloc[0]
+    #     )
+    # )
 
 
     # Save each analyte data
@@ -180,14 +181,11 @@ def _transform_time_series(
 
         if(rm_outliers):
             col_num = ana_data.shape[1]
-
             for col in range(col_num):
-
                 try:
                     ana_data.iloc[:,col] = preprocess.remove_outliers(
                         ana_data.iloc[:,col], 
                         z_threshold=z_threshold,
-                        nan_policy='omit',  # Omit nan values while computing.
                     )
                 except Exception as e:
                     transformation_logger.error(e)
