@@ -211,7 +211,7 @@ def query_data(data_pylenm_dm, well_name, analyte_name):
     data = data_pylenm_dm.data
     query = data[data.STATION_ID == well_name]
     query = query[query.ANALYTE_NAME == analyte_name]
-    if(query.shape[0] == 0):
+    if query.shape[0] == 0:
         return 0        # TODO: Handle this better!
         # return pd.DataFrame(columns=data.columns)   # TODO: Use this once you make sure that the above return value is not being used anywhere else.
     else:
