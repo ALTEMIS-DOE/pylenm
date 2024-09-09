@@ -34,12 +34,12 @@ class PylenmDataModule(object):
         self.logger = logger_config.setup_logging(module_name=__name__, level=logger_level)
 
         if data is not None: 
-            self.setData(data, verbose=True)
+            self.set_data(data, verbose=True)
         else:
             self.data = None
         
         if construction_data is not None:
-            self.setConstructionData(construction_data, verbose=True)
+            self.set_construction_data(construction_data, verbose=True)
         else:
             self.construction_data = None
         
@@ -115,7 +115,7 @@ class PylenmDataModule(object):
 
 
     # SETTING DATA
-    def setData(self, data: pd.DataFrame, verbose: bool=False) -> None:
+    def set_data(self, data: pd.DataFrame, verbose: bool=False) -> None:
         """Saves the dataset into pylenm.
 
         Args:
@@ -141,7 +141,7 @@ class PylenmDataModule(object):
             self.logger.warn(c.PYLENM_DATA_REQUIREMENTS)
 
 
-    def setConstructionData(
+    def set_construction_data(
         self, 
         construction_data: pd.DataFrame, 
         verbose: bool=False,
