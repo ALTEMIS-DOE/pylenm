@@ -1,6 +1,8 @@
 import numpy as np
 import scipy.stats as stats
 
+from pylenm2.stats import metrics
+from pylenm2.stats import gp as stats_gp
 from pylenm2.utils import constants as c
 
 import logging
@@ -84,12 +86,26 @@ def remove_outliers(
 
 
 # Helper fucntion for get_Best_Wells
-def __get_Best_Well(self, X, y, xx, ref, selected, leftover, ft=['Elevation'], regression='linear', verbose=True, smooth=True, model=None):
+def _get_Best_Well(
+        # self, 
+        X, 
+        y, 
+        xx, 
+        ref, 
+        selected, 
+        leftover, 
+        ft=['Elevation'], 
+        regression='linear', 
+        verbose=True, 
+        smooth=True, 
+        model=None,
+    ):
+
     num_selected=len(selected)
     errors = []
     if(model==None):
         if(len(selected)<5):
-            model, pred = self.fit_gp(X, y, xx)
+            model, pred = stats_gp.fit_gp(X, y, xx)
         else:
             model = None
     else:
@@ -100,15 +116,15 @@ def __get_Best_Well(self, X, y, xx, ref, selected, leftover, ft=['Elevation'], r
         if(verbose): 
             print("Selecting first well")
         for ix in leftover:
-            y_pred, r_map, residuals, lr_trend = self.interpolate_topo(X=X.iloc[ix:ix+1,:], y=y[ix:ix+1], xx=xx, ft=ft, regression=regression, model=model, smooth=smooth)
-            y_err = self.mse(ref, y_pred)
+            y_pred, r_map, residuals, lr_trend = stats_gp.interpolate_topo(X=X.iloc[ix:ix+1,:], y=y[ix:ix+1], xx=xx, ft=ft, regression=regression, model=model, smooth=smooth)
+            y_err = stats_gp.mse(ref, y_pred)
             errors.append((ix, y_err))
     
     if(num_selected > 0):
         for ix in leftover:
             joined = selected + [ix]
-            y_pred, r_map, residuals, lr_trend = self.interpolate_topo(X=X.iloc[joined,:], y=y[joined], xx=xx, ft=ft, regression=regression, model=model, smooth=smooth)
-            y_err = self.mse(ref, y_pred)
+            y_pred, r_map, residuals, lr_trend = stats_gp.interpolate_topo(X=X.iloc[joined,:], y=y[joined], xx=xx, ft=ft, regression=regression, model=model, smooth=smooth)
+            y_err = metrics.mse(ref, y_pred)
             errors.append((ix, y_err))
         
     err_ix = [x[0] for x in errors]
@@ -120,7 +136,20 @@ def __get_Best_Well(self, X, y, xx, ref, selected, leftover, ft=['Elevation'], r
     return min_ix, min_val
 
 
-def get_Best_Wells(self, X, y, xx, ref, initial, max_wells, ft=['Elevation'], regression='linear', verbose=True, smooth=True, model=None):
+def get_Best_Wells(
+        # self, 
+        X, 
+        y, 
+        xx, 
+        ref, 
+        initial, 
+        max_wells, 
+        ft=['Elevation'], 
+        regression='linear', 
+        verbose=True, 
+        smooth=True, 
+        model=None,
+    ):
     """Greedy optimization function to select a subset of wells as to minimizes the MSE from a reference map
 
     Args:
@@ -149,12 +178,12 @@ def get_Best_Wells(self, X, y, xx, ref, initial, max_wells, ft=['Elevation'], re
 
     for i in range(max_wells-len(selected)):
         if(i==0): # select first well will min error
-            well_ix, err = self.__get_Best_Well(X=X,y=y, xx=xx, ref=ref, selected=selected, leftover=leftover, ft=ft, regression=regression, verbose=verbose, smooth=smooth, model=model)
+            well_ix, err = _get_Best_Well(X=X,y=y, xx=xx, ref=ref, selected=selected, leftover=leftover, ft=ft, regression=regression, verbose=verbose, smooth=smooth, model=model)
             selected.append(well_ix)
             leftover.remove(well_ix)
             tot_err.append(err)
         else:
-            well_ix, err = self.__get_Best_Well(X=X,y=y, xx=xx, ref=ref, selected=selected, leftover=leftover, ft=ft, regression=regression, verbose=verbose, smooth=smooth, model=model)
+            well_ix, err = _get_Best_Well(X=X,y=y, xx=xx, ref=ref, selected=selected, leftover=leftover, ft=ft, regression=regression, verbose=verbose, smooth=smooth, model=model)
             selected.append(well_ix)
             leftover.remove(well_ix)
             tot_err.append(err)
