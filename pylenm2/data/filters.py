@@ -1,4 +1,6 @@
 import os
+import re
+import numpy as np
 import pandas as pd
 
 import pylenm2
@@ -51,7 +53,8 @@ def simplify_data(
         data_df = data.data.copy(deep=True)
     else:
         filters_logger.error("`data` must be either a pandas DataFrame or PylenmDataModule!")
-        raise ValueError("`data` must be either a pandas DataFrame or PylenmDataModule!")
+        # raise ValueError("`data` must be either a pandas DataFrame or PylenmDataModule!")
+        return None
         
     if columns==None:
         # sel_cols = ['COLLECTION_DATE','STATION_ID','ANALYTE_NAME','RESULT','RESULT_UNITS']
@@ -159,26 +162,34 @@ def filter_by_column(data, col, equals=[]):
     return final_data
 
 
-def filter_wells(self, units):
+def filter_wells(data_pylenm_dm, units):
     """Returns a list of the well names filtered by the unit(s) specified.
 
     Args:
+        data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
         units (list): Letter of the well to be filtered (e.g. [‘A’] or [‘A’, ‘D’])
 
     Returns:
         list: well names filtered by the unit(s) specified
     """
-    data = self.data
-    if(units==None):
+    
+    data = data_pylenm_dm.data
+    
+    if units==None:
         units= ['A', 'B', 'C', 'D']
+    elif not isinstance(units, (list, tuple)):
+        units = [units]
+    
     def getUnits():
         wells = list(np.unique(data.STATION_ID))
         wells = pd.DataFrame(wells, columns=['STATION_ID'])
+        
         for index, row in wells.iterrows():
             mo = re.match('.+([0-9])[^0-9]*$', row.STATION_ID)
             last_index = mo.start(1)
             wells.at[index, 'unit'] = row.STATION_ID[last_index+1:]
             u = wells.unit.iloc[index]
+            
             if(len(u)==0): # if has no letter, use D
                 wells.at[index, 'unit'] = 'D'
             if(len(u)>1): # if has more than 1 letter, remove the extra letter
@@ -186,14 +197,19 @@ def filter_wells(self, units):
                     wells.at[index, 'unit'] = u[:-1]
                 else:
                     wells.at[index, 'unit'] = u[1:]
+            
             u = wells.unit.iloc[index]
+            
             if(u=='A' or u=='B' or u=='C' or u=='D'):
                 pass
             else:
                 wells.at[index, 'unit'] = 'D'
         return wells
+    
     df = getUnits()
+    
     res = df.loc[df.unit.isin(units)]
+    
     return list(res.STATION_ID)
 
 
@@ -209,10 +225,13 @@ def query_data(data_pylenm_dm, well_name, analyte_name):
         pd.DataFrame: filtered data based on query conditons
     """
     data = data_pylenm_dm.data
+    
     query = data[data.STATION_ID == well_name]
     query = query[query.ANALYTE_NAME == analyte_name]
-    if query.shape[0] == 0:
-        return 0        # TODO: Handle this better!
+    
+    if query.shape[0]==0:
+        return None
+        # return 0        # TODO: Handle this better!
         # return pd.DataFrame(columns=data.columns)   # TODO: Use this once you make sure that the above return value is not being used anywhere else.
     else:
         return query
