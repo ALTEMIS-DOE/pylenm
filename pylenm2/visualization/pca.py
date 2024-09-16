@@ -113,7 +113,7 @@ def plot_PCA_by_date(
         # if(len(np.unique(query.ANALYTE_NAME.values)) < 6):
         #     return 'ERROR: {} has less than the 6 analytes we want to analyze.'.format(date)
         else:
-            # analytes = self.__custom_analyte_sort(np.unique(query.ANALYTE_NAME.values))
+            # analytes = preprocess._custom_analyte_sort(np.unique(query.ANALYTE_NAME.values))
             analytes = sorted(analytes)
             piv = query.reset_index().pivot_table(
                 index='STATION_ID', 
@@ -409,7 +409,7 @@ def plot_PCA_by_year(
     # if(len(np.unique(query.ANALYTE_NAME.values)) < 6):
     #     return 'ERROR: {} has less than the 6 analytes we want to analyze.'.format(year)
     else:
-        # analytes = self.__custom_analyte_sort(np.unique(query.ANALYTE_NAME.values))
+        # analytes = preprocess._custom_analyte_sort(np.unique(query.ANALYTE_NAME.values))
         analytes = sorted(analytes)
         piv = query.reset_index().pivot_table(
             index='STATION_ID', 
