@@ -19,12 +19,17 @@ preprocess_logger = logger_config.setup_logging(
 
 # Helper function for plot_correlation
 # Sorts analytes in a specific order: 'TRITIUM', 'URANIUM-238','IODINE-129','SPECIFIC CONDUCTANCE', 'PH', 'DEPTH_TO_WATER'
-def __custom_analyte_sort(self, analytes):
+def _custom_analyte_sort(analytes):
     my_order = 'TURISPDABCEFGHJKLMNOQVWXYZ-_abcdefghijklmnopqrstuvwxyz135790 2468'
-    return sorted(analytes, key=lambda word: [my_order.index(c) for c in word])
+    return sorted(
+        analytes, 
+        key=lambda word: [
+            my_order.index(c) for c in word
+        ],
+    )
 
 
-def get_MCL(self, analyte_name):
+def get_MCL(analyte_name):
     """Returns the Maximum Concentration Limit value for the specified analyte. Example: 'TRITIUM' returns 1.3
 
     Args:
@@ -33,9 +38,14 @@ def get_MCL(self, analyte_name):
     Returns:
         float: MLC value
     """
-    mcl_dictionary = {'TRITIUM': 1.3, 'URANIUM-238': 1.31,  'NITRATE-NITRITE AS NITROGEN': 1,
-                        'TECHNETIUM-99': 2.95, 'IODINE-129': 0, 'STRONTIUM-90': 0.9
-                        }
+    mcl_dictionary = {
+        'TRITIUM': 1.3, 
+        'URANIUM-238': 1.31, 
+        'NITRATE-NITRITE AS NITROGEN': 1,
+        'TECHNETIUM-99': 2.95, 
+        'IODINE-129': 0, 
+        'STRONTIUM-90': 0.9,
+    }
     return mcl_dictionary[analyte_name]
 
 
