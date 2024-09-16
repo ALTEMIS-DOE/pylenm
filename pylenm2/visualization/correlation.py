@@ -262,7 +262,8 @@ def plot_corr_by_well(
     
 
 def plot_all_corr_by_well(
-        self, 
+        # self, 
+        data_pylenm_dm,
         analytes, 
         remove_outliers=True, 
         z_threshold=4, 
@@ -275,6 +276,7 @@ def plot_all_corr_by_well(
     """Plots the correlations with the physical plots as well as the important analytes over time for each well in the dataset.
 
     Args:
+        data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
         analytes (list): list of analyte names to use
         remove_outliers (bool, optional): choose whether or to remove the outliers. Defaults to True.
         z_threshold (int, optional): z_score threshold to eliminate outliers. Defaults to 4.
@@ -284,11 +286,25 @@ def plot_all_corr_by_well(
         log_transform (bool, optional): flag for log base 10 transformation. Defaults to False.
         fontsize (int, optional): font size. Defaults to 20.
     """
-    data = self.data
+    
+    # data = self.data
+    data = data_pylenm_dm.data
+    
     wells = np.array(data.STATION_ID.values)
     wells = np.unique(wells)
+    
     for well in wells:
-        self.plot_corr_by_well(well_name=well, analytes=analytes,remove_outliers=remove_outliers, z_threshold=z_threshold, interpolate=interpolate, frequency=frequency, save_dir=save_dir, log_transform=log_transform, fontsize=fontsize)
+        plot_corr_by_well(
+            data_pylenm_dm=data_pylenm_dm,
+            well_name=well, 
+            analytes=analytes,remove_outliers=remove_outliers, 
+            z_threshold=z_threshold, 
+            interpolate=interpolate, 
+            frequency=frequency, 
+            save_dir=save_dir, 
+            log_transform=log_transform, 
+            fontsize=fontsize,
+        )
 
  
 def plot_corr_by_date_range(
