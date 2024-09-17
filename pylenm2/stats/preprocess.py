@@ -89,7 +89,15 @@ def remove_outliers(
     
     # Setting values outside threshold to `nan` values.
     # data = data.drop(data.index[row_loc])
-    data = data.drop(data.index[row_loc]).reindex(data.index)     # NOTE: Reindexing is necessary to make sure that the size mismatch is handled by adding `NaN` values for the dropped rows.
+    try:
+        data = data.drop(data.index[row_loc]).reindex(data.index)     # NOTE: Reindexing is necessary to make sure that the size mismatch is handled by adding `NaN` values for the dropped rows.
+    
+    except ValueError as ve:
+        preprocess_logger.error(ve)
+        data = data.drop(data.index[row_loc])   # NOTE: Using this as a hack currently.
+    
+    except Exception as e:
+        raise(e)
 
     # # New implementation
     # z = np.abs(stats.zscore(data, nan_policy=nan_policy))
