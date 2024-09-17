@@ -138,7 +138,7 @@ class PylenmDataModule(object):
         
         else:
             self.logger.info("Failed to import data!")
-            self.logger.warn(c.PYLENM_DATA_REQUIREMENTS)
+            self.logger.warning(c.PYLENM_DATA_REQUIREMENTS)
 
 
     def set_construction_data(
@@ -146,7 +146,7 @@ class PylenmDataModule(object):
         construction_data: pd.DataFrame, 
         verbose: bool=False,
     ) -> None:
-        """Imports the addtitional well information as a separate DataFrame.
+        """Imports the additional station information as a separate DataFrame.
 
         Args:
             construction_data (pd.DataFrame): Data with additonal details.
@@ -166,7 +166,7 @@ class PylenmDataModule(object):
         
         else:
             self.logger.info("Failed to import the construction data!")
-            self.logger.warn(c.PYLENM_CONSTRUCTION_DATA_REQUIREMENTS)
+            self.logger.warning(c.PYLENM_CONSTRUCTION_DATA_REQUIREMENTS)
 
 
     def set_jointData(self, data, lag):

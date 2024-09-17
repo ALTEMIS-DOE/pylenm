@@ -162,15 +162,15 @@ def filter_by_column(data, col, equals=[]):
     return final_data
 
 
-def filter_wells(data_pylenm_dm, units):
-    """Returns a list of the well names filtered by the unit(s) specified.
+def filter_stations(data_pylenm_dm, units):
+    """Returns a list of the station names filtered by the unit(s) specified.
 
     Args:
         data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
-        units (list): Letter of the well to be filtered (e.g. [‘A’] or [‘A’, ‘D’])
+        units (list): Letter of the station to be filtered (e.g. [‘A’] or [‘A’, ‘D’])
 
     Returns:
-        list: well names filtered by the unit(s) specified
+        list: station names filtered by the unit(s) specified
     """
     
     data = data_pylenm_dm.data
@@ -181,30 +181,30 @@ def filter_wells(data_pylenm_dm, units):
         units = [units]
     
     def getUnits():
-        wells = list(np.unique(data.STATION_ID))
-        wells = pd.DataFrame(wells, columns=['STATION_ID'])
+        stations = list(np.unique(data.STATION_ID))
+        stations = pd.DataFrame(stations, columns=['STATION_ID'])
         
-        for index, row in wells.iterrows():
+        for index, row in stations.iterrows():
             mo = re.match('.+([0-9])[^0-9]*$', row.STATION_ID)
             last_index = mo.start(1)
-            wells.at[index, 'unit'] = row.STATION_ID[last_index+1:]
-            u = wells.unit.iloc[index]
+            stations.at[index, 'unit'] = row.STATION_ID[last_index+1:]
+            u = stations.unit.iloc[index]
             
             if(len(u)==0): # if has no letter, use D
-                wells.at[index, 'unit'] = 'D'
+                stations.at[index, 'unit'] = 'D'
             if(len(u)>1): # if has more than 1 letter, remove the extra letter
                 if(u.find('R')>0):
-                    wells.at[index, 'unit'] = u[:-1]
+                    stations.at[index, 'unit'] = u[:-1]
                 else:
-                    wells.at[index, 'unit'] = u[1:]
+                    stations.at[index, 'unit'] = u[1:]
             
-            u = wells.unit.iloc[index]
+            u = stations.unit.iloc[index]
             
             if(u=='A' or u=='B' or u=='C' or u=='D'):
                 pass
             else:
-                wells.at[index, 'unit'] = 'D'
-        return wells
+                stations.at[index, 'unit'] = 'D'
+        return stations
     
     df = getUnits()
     
@@ -213,12 +213,12 @@ def filter_wells(data_pylenm_dm, units):
     return list(res.STATION_ID)
 
 
-def query_data(data_pylenm_dm, well_name, analyte_name):
-    """Filters data by passing the data and specifying the well_name and analyte_name
+def query_data(data_pylenm_dm, station_name, analyte_name):
+    """Filters data by passing the data and specifying the station_name and analyte_name
 
     Args:
         data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
-        well_name (str): name of the well to be processed
+        station_name (str): name of the station to be processed
         analyte_name (str): name of the analyte to be processed
 
     Returns:
@@ -226,7 +226,7 @@ def query_data(data_pylenm_dm, well_name, analyte_name):
     """
     data = data_pylenm_dm.data
     
-    query = data[data.STATION_ID == well_name]
+    query = data[data.STATION_ID == station_name]
     query = query[query.ANALYTE_NAME == analyte_name]
     
     if query.shape[0]==0:

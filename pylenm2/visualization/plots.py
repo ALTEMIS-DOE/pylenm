@@ -57,7 +57,7 @@ def _plotUpperHalf(x_data, y_data, *args, **kwargs):   # TODO: confirm that this
 
 def plot_data(
         data_pylenm_dm, 
-        well_name, 
+        station_name, 
         analyte_name, 
         log_transform=True, 
         alpha=0,
@@ -71,11 +71,11 @@ def plot_data(
         col=None, 
         equals=[],
     ):
-    """Plot concentrations over time of a specified well and analyte with a smoothed curve on interpolated data points.
+    """Plot concentrations over time of a specified station and analyte with a smoothed curve on interpolated data points.
 
     Args:
         data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
-        well_name (str): name of the well to be processed
+        station_name (str): name of the station to be processed
         analyte_name (str): name of the analyte to be processed
         log_transform (bool, optional): choose whether or not the data should 
             be transformed to log base 10 values. Defaults to `True`.
@@ -103,10 +103,10 @@ def plot_data(
         None
     """
 
-    # Gets appropriate data (well_name and analyte_name)
+    # Gets appropriate data (station_name and analyte_name)
     query_raw = filters.query_data(
         data_pylenm_dm=data_pylenm_dm, 
-        well_name=well_name, 
+        station_name=station_name, 
         analyte_name=analyte_name,
     )       # TODO: Handle better for empty values.
 
@@ -115,7 +115,7 @@ def plot_data(
     # Check if the query returned any results
     # if(type(query)==int and query == 0):
     if query is None:
-        plots_logger.error(f"No results found for {well_name} and {analyte_name}")
+        plots_logger.error(f"No results found for {station_name} and {analyte_name}")
         return None
     
     else:
@@ -131,14 +131,14 @@ def plot_data(
                 plots_logger.error("Ran into ERROR when calling filter_by_column()!")
                 return filter_res
 
-            # Get the intersection of the query wells and filter wells
-            query_wells = list(query.STATION_ID.unique())
-            filter_wells = list(filter_res.index.unique())
-            intersect_wells = list(set(query_wells) & set(filter_wells))
-            if(len(intersect_wells)<=0):
+            # Get the intersection of the query stations and filter stations
+            query_stations = list(query.STATION_ID.unique())
+            filter_stations = list(filter_res.index.unique())
+            intersect_stations = list(set(query_stations) & set(filter_stations))
+            if(len(intersect_stations)<=0):
                 plots_logger.error('ERROR: No results for this query with the specifed filter parameters.')
                 return 'ERROR: No results for this query with the specifed filter parameters.'
-            query = query[query['STATION_ID'].isin(intersect_wells)]
+            query = query[query['STATION_ID'].isin(intersect_stations)]
         
         # Extract the date and result values from the query data
         x_data = query.COLLECTION_DATE
@@ -187,7 +187,10 @@ def plot_data(
 
         unit = query.RESULT_UNITS.values[0]
 
-        ax.set_title(str(well_name) + ' - ' + analyte_name, fontweight='bold')
+        ax.set_title(
+            # str(station_name) + ' - ' + analyte_name, 
+            f"{station_name} - {analyte_name}", fontweight='bold',
+        )
         ttl = ax.title
         ttl.set_position([.5, 1.05])
         
@@ -227,7 +230,7 @@ def plot_data(
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
             plt.savefig(
-                f"{save_dir}/{str(well_name)}-{analyte_name}.png", 
+                f"{save_dir}/{str(station_name)}-{analyte_name}.png", 
                 bbox_inches="tight",
             )
         
@@ -253,7 +256,7 @@ def plot_all_data(
         plot_inline=True, 
         save_dir='plot_data',
     ):
-    """Plot concentrations over time for every well and analyte with a smoothed curve on interpolated data points.
+    """Plot concentrations over time for every station and analyte with a smoothed curve on interpolated data points.
 
     Args:
         data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
@@ -266,25 +269,26 @@ def plot_all_data(
     
     analytes = ['TRITIUM','URANIUM-238','IODINE-129','SPECIFIC CONDUCTANCE', 'PH', 'DEPTH_TO_WATER']
     
-    wells = np.array(data_pylenm_dm.data.STATION_ID.values)
-    wells = np.unique(wells)
+    stations = np.array(data_pylenm_dm.data.STATION_ID.values)
+    stations = np.unique(stations)
 
-    wells_analytes_iter = list(itertools.product(wells, analytes))
+    stations_analytes_iter = list(itertools.product(stations, analytes))
     
     success = 0
     errors = 0
     
-    # for well in wells:
+    # for station in stations:
     #     for analyte in analytes:
-    for well, analyte in tqdm(wells_analytes_iter, desc="Well Analyte Pair", total=(len(analytes)*len(wells))):
+    for station, analyte in tqdm(stations_analytes_iter, desc="Station Analyte Pair", total=(len(analytes)*len(stations))):
         plot = plot_data(
             data_pylenm_dm=data_pylenm_dm,
-            well_name=well, 
+            station_name=station, 
             analyte_name=analyte, 
             log_transform=log_transform, 
             alpha=alpha, 
             year_interval=year_interval, 
             plot_inline=plot_inline, 
+            save_plot=True,
             save_dir=save_dir,
         )
         
@@ -300,16 +304,16 @@ def plot_all_data(
 def plot_MCL(
         # self, 
         data_pylenm_dm,
-        well_name, 
+        station_name, 
         analyte_name, 
         year_interval=5, 
         save_dir='plot_MCL',
     ):
-    """Plots the linear regression line of data given the analyte_name and well_name. The plot includes the prediction where the line of best fit intersects with the Maximum Concentration Limit (MCL).
+    """Plots the linear regression line of data given the analyte_name and station_name. The plot includes the prediction where the line of best fit intersects with the Maximum Concentration Limit (MCL).
 
     Args:
         data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
-        well_name (str): ame of the well to be processed
+        station_name (str): ame of the station to be processed
         analyte_name (str): name of the analyte to be processed
         year_interval (int, optional): lot by how many years to appear in the axis e.g.(1 = every year, 5 = every 5 years, ...). Defaults to 5.
         save_dir (str, optional): name of the directory you want to save the plot to. Defaults to 'plot_MCL'.
@@ -327,18 +331,18 @@ def plot_MCL(
         y = m1 * x + b1
         return x,y
 
-    # Gets appropriate data (well_name and analyte_name)
-    # query = self.query_data(well_name, analyte_name)
+    # Gets appropriate data (station_name and analyte_name)
+    # query = self.query_data(station_name, analyte_name)
     query = filters.query_data(
         data_pylenm_dm=data_pylenm_dm,
-        well_name=well_name, 
+        station_name=station_name, 
         analyte_name=analyte_name,
     )
 
     # if(type(query)==int and query == 0):
     if isinstance(query, int) and query==0:
         plots_logger.info(
-            f"No results found for {well_name} and {analyte_name}"
+            f"No results found for {station_name} and {analyte_name}"
         )
         return None
     
@@ -395,7 +399,7 @@ def plot_MCL(
 
             fig, ax = plt.subplots(figsize=(10, 6))
 
-            ax.set_title(well_name + ' - ' + analyte_name, fontweight='bold')
+            ax.set_title(station_name + ' - ' + analyte_name, fontweight='bold')
             ttl = ax.title
             ttl.set_position([.5, 1.05])
             years = mdates.YearLocator(year_interval)  # every year
@@ -482,8 +486,8 @@ def plot_MCL(
                 os.makedirs(save_dir)
             
             plt.savefig(
-                # save_dir + '/' + well_name + '-' + analyte_name +'.png', 
-                f"{save_dir}/{well_name}-{analyte_name}.png", 
+                # save_dir + '/' + station_name + '-' + analyte_name +'.png', 
+                f"{save_dir}/{station_name}-{analyte_name}.png", 
                 bbox_inches="tight",
             )
 

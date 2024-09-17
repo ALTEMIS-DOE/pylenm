@@ -9,7 +9,7 @@ def plot_coordinates_to_map(
         center=[33.271459, -81.675873], 
         zoom=14,
     ) -> Map:
-    """Plots the well locations on an interactive map given coordinates.
+    """Plots the station locations on an interactive map given coordinates.
 
     Args:
         gps_data (pd.DataFrame): Data frame with the following column names: station_id, latitude, longitude, color. If the color column is not passed, the default color will be blue.

@@ -23,16 +23,16 @@ heatmap_logger = logger_config.setup_logging(
 def plot_correlation_heatmap(
         # self, 
         data_pylenm_dm, 
-        well_name, 
+        station_name, 
         show_symmetry=True, 
         color=True, 
         save_dir='plot_correlation_heatmap',
     ):
-    """ Plots a heatmap of the correlations of the important analytes over time for a specified well.
+    """ Plots a heatmap of the correlations of the important analytes over time for a specified station.
 
     Args:
         data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
-        well_name (str): name of the well to be processed
+        station_name (str): name of the station to be processed
         show_symmetry (bool, optional): choose whether or not the heatmap should show the same information twice over the diagonal. Defaults to True.
         color (bool, optional): choose whether or not the plot should be in color or in greyscale. Defaults to True.
         save_dir (str, optional): name of the directory you want to save the plot to. Defaults to 'plot_correlation_heatmap'.
@@ -42,7 +42,7 @@ def plot_correlation_heatmap(
     """
     
     data = data_pylenm_dm.data
-    query = data[data.STATION_ID == well_name]
+    query = data[data.STATION_ID == station_name]
     
     a = list(np.unique(query.ANALYTE_NAME.values))
     b = ['TRITIUM','IODINE-129','SPECIFIC CONDUCTANCE', 'PH','URANIUM-238', 'DEPTH_TO_WATER']
@@ -66,7 +66,7 @@ def plot_correlation_heatmap(
     samples = piv.shape[0]
     
     if(samples < 5):
-        heatmap_logger.error(f"ERROR: {well_name} does not have enough samples to plot.")
+        heatmap_logger.error(f"ERROR: {station_name} does not have enough samples to plot.")
         return None
     
     else:
@@ -87,7 +87,7 @@ def plot_correlation_heatmap(
             cmap = 'binary'
         
         fig, ax = plt.subplots(figsize=(8,6))
-        ax.set_title(well_name + '_correlation', fontweight='bold')
+        ax.set_title(station_name + '_correlation', fontweight='bold')
         ttl = ax.title
         ttl.set_position([.5, 1.05])
         
@@ -122,10 +122,13 @@ def plot_correlation_heatmap(
             os.makedirs(save_dir)
         
         fig.savefig(
-            # save_dir + '/' + well_name + '_correlation.png', 
-            f"{save_dir}/{well_name}_correlation.png", 
+            # save_dir + '/' + station_name + '_correlation.png', 
+            f"{save_dir}/{station_name}_correlation.png", 
             bbox_inches="tight",
         )
+
+        # Returning a random non-None value to mark successful execution
+        return 200
 
 
 def plot_all_correlation_heatmap(
@@ -135,7 +138,7 @@ def plot_all_correlation_heatmap(
         color=True, 
         save_dir='plot_correlation_heatmap',
     ):
-    """Plots a heatmap of the correlations of the important analytes over time for each well in the dataset.
+    """Plots a heatmap of the correlations of the important analytes over time for each station in the dataset.
 
     Args:
         data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
@@ -146,14 +149,25 @@ def plot_all_correlation_heatmap(
     
     data = data_pylenm_dm.data
     
-    wells = np.array(data.STATION_ID.values)
-    wells = np.unique(wells)
+    stations = np.array(data.STATION_ID.values)
+    stations = np.unique(stations)
+
+    successful_plots = 0
+    failed_plots = 0
     
-    for well in tqdm(wells, desc="Wells"):
-        plot_correlation_heatmap(
+    for station in tqdm(stations, desc="Stations"):
+        plot_status = plot_correlation_heatmap(
             data_pylenm_dm=data_pylenm_dm,
-            well_name=well,
+            station_name=station,
             show_symmetry=show_symmetry,
             color=color,
             save_dir=save_dir,
         )
+
+        if plot_status is None:
+            failed_plots += 1
+        else:
+            successful_plots += 1
+        
+    heatmap_logger.info(f"Successful plots: {successful_plots}")
+    heatmap_logger.info(f"Failed plots: {failed_plots}")

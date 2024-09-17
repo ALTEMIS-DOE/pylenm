@@ -36,8 +36,8 @@ def get_Best_GP(
     TODO: ASK: Ask if the bound values for `Matern` and `WhiteKernel` are chosen particularly or arbitrarily. @Zexuan
     
     Args:
-        X (numpy.array): array of dimension (number of wells, 2) where each element is a pair of UTM coordinates.
-        y (numpy.array): array of size (number of wells) where each value corresponds to a concentration value at a well.
+        X (numpy.array): array of dimension (number of stations, 2) where each element is a pair of UTM coordinates.
+        y (numpy.array): array of size (number of stations) where each value corresponds to a concentration value at a station.
         smooth (bool, optional): flag to toggle WhiteKernel on and off. Defaults to True.
         seed (int, optional): random state setting. Defaults to 42.
 
@@ -94,8 +94,8 @@ def fit_gp(
     """Fits Gaussian Process for X and y and returns both the GP model and the predicted values
 
     Args:
-        X (numpy.array): array of dimension (number of wells, 2) where each element is a pair of UTM coordinates.
-        y (numpy.array): array of size (number of wells) where each value corresponds to a concentration value at a well.
+        X (numpy.array): array of dimension (number of stations, 2) where each element is a pair of UTM coordinates.
+        y (numpy.array): array of size (number of stations) where each value corresponds to a concentration value at a station.
         xx (numpy.array): prediction locations
         model (GaussianProcessRegressor, optional): model to fit. Defaults to None.
         smooth (bool, optional): flag to toggle WhiteKernel on and off. Defaults to True.
@@ -130,7 +130,7 @@ def interpolate_topo(
 
     Args:
         X (numpy.array): training values. Must include "Easting" and "Northing" columns.
-        y (numpy.array): array of size (number of wells) where each value corresponds to a concentration value at a well.
+        y (numpy.array): array of size (number of stations) where each value corresponds to a concentration value at a station.
         xx (numpy.array): prediction locations
         ft (list, optional): eature names to train on. Defaults to ['Elevation'].
         model (GaussianProcessRegressor, optional): model to fit. Defaults to None.

@@ -1,4 +1,5 @@
 import numpy as np
+from tqdm import tqdm
 import scipy.stats as stats
 
 from pylenm2.stats import metrics
@@ -95,8 +96,8 @@ def remove_outliers(
     return data
 
 
-# Helper fucntion for get_Best_Wells
-def _get_Best_Well(
+# Helper fucntion for get_Best_Stations
+def _get_Best_Station(
         # self, 
         X, 
         y, 
@@ -111,8 +112,9 @@ def _get_Best_Well(
         model=None,
     ):
 
-    num_selected=len(selected)
+    num_selected = len(selected)
     errors = []
+    
     if(model==None):
         if(len(selected)<5):
             model, pred = stats_gp.fit_gp(X, y, xx)
@@ -120,17 +122,19 @@ def _get_Best_Well(
             model = None
     else:
         model=model
+    
     if(verbose):  
-        print("# of wells to choose from: ", len(leftover))
-    if(num_selected==0):
+        print("# of stations to choose from: ", len(leftover))
+    
+    if num_selected == 0:
         if(verbose): 
-            print("Selecting first well")
+            print("Selecting first station")
         for ix in leftover:
             y_pred, r_map, residuals, lr_trend = stats_gp.interpolate_topo(X=X.iloc[ix:ix+1,:], y=y[ix:ix+1], xx=xx, ft=ft, regression=regression, model=model, smooth=smooth)
             y_err = stats_gp.mse(ref, y_pred)
             errors.append((ix, y_err))
     
-    if(num_selected > 0):
+    if num_selected > 0:
         for ix in leftover:
             joined = selected + [ix]
             y_pred, r_map, residuals, lr_trend = stats_gp.interpolate_topo(X=X.iloc[joined,:], y=y[joined], xx=xx, ft=ft, regression=regression, model=model, smooth=smooth)
@@ -141,34 +145,39 @@ def _get_Best_Well(
     err_vals = [x[1] for x in errors]
     min_val = min(err_vals)
     min_ix = err_ix[err_vals.index(min(err_vals))]
+    
+    preprocess_logger.info(f"Selected station: {min_ix} with a MSE error of {min_val}.")
+    
     if(verbose):
-        print("Selected well: {} with a MSE error of {}\n".format(min_ix, min_val))
+        # print("Selected station: {} with a MSE error of {}\n".format(min_ix, min_val))
+        print(f"Selected station: {min_ix} with a MSE error of {min_val}.")
+    
     return min_ix, min_val
 
 
-def get_Best_Wells(
+def get_Best_Stations(
         # self, 
         X, 
         y, 
         xx, 
         ref, 
         initial, 
-        max_wells, 
+        max_stations, 
         ft=['Elevation'], 
         regression='linear', 
         verbose=True, 
         smooth=True, 
         model=None,
     ):
-    """Greedy optimization function to select a subset of wells as to minimizes the MSE from a reference map
+    """Greedy optimization function to select a subset of stations as to minimizes the MSE from a reference map
 
     Args:
-        X (numpy.array): array of dimension (number of wells, 2) where each element is a pair of UTM coordinates.
-        y (numpy.array): array of size (number of wells) where each value corresponds to a concentration value at a well.
+        X (numpy.array): array of dimension (number of stations, 2) where each element is a pair of UTM coordinates.
+        y (numpy.array): array of size (number of stations) where each value corresponds to a concentration value at a station.
         xx (numpy.array): prediction locations
         ref (numpy.array): reference field to optimize for (aka best/true map)
-        initial (list): indices of wells as the starting wells for optimization
-        max_wells (int): number of wells to optimize for
+        initial (list): indices of stations as the starting stations for optimization
+        max_stations (int): number of stations to optimize for
         ft (list, optional): feature names to train on. Defaults to ['Elevation'].
         regression (str, optional): choice between 'linear' for linear regression, 'rf' for random forest regression, 'ridge' for ridge regression, or 'lasso' for lasso regression.. Defaults to 'linear'.
         verbose (bool, optional): v. Defaults to True.
@@ -176,26 +185,63 @@ def get_Best_Wells(
         model (GaussianProcessRegressor, optional): model to fit. Defaults to None.
 
     Returns:
-        list: index of best wells in order from best to worst
+        list: index of best stations in order from best to worst
     """
+
+    BAD_RETURN = None, None
+
+    if not isinstance(initial, list):
+        preprocess_logger.error(f"`initial` parameter must be a list. Found `{type(initial)}`.")
+        return BAD_RETURN
+
     tot_err = []
     selected = initial
-    leftover = list(range(0, X.shape[0])) # all indexes from 0 to number of well
+    leftover = list(range(0, X.shape[0])) # all indexes from 0 to number of station
     
-    # Remove the initial set of wells from pool of well indices to choose from
+    # Remove the initial set of stations from pool of station indices to choose from
     for i in initial:
         leftover.remove(i)
 
-    for i in range(max_wells-len(selected)):
-        if(i==0): # select first well will min error
-            well_ix, err = _get_Best_Well(X=X,y=y, xx=xx, ref=ref, selected=selected, leftover=leftover, ft=ft, regression=regression, verbose=verbose, smooth=smooth, model=model)
-            selected.append(well_ix)
-            leftover.remove(well_ix)
-            tot_err.append(err)
-        else:
-            well_ix, err = _get_Best_Well(X=X,y=y, xx=xx, ref=ref, selected=selected, leftover=leftover, ft=ft, regression=regression, verbose=verbose, smooth=smooth, model=model)
-            selected.append(well_ix)
-            leftover.remove(well_ix)
-            tot_err.append(err)
-    print(selected)
+    station_itr_count = max_stations - len(selected)
+    for i in tqdm(range(station_itr_count), desc="Station", total=station_itr_count):
+
+        # For some reason both the if...else conditions contain the same piece of code!!!
+        # if i == 0: # select first station will min error
+        #     station_ix, err = _get_Best_Station(
+        #         X=X, 
+        #         y=y, 
+        #         xx=xx, 
+        #         ref=ref, 
+        #         selected=selected, 
+        #         leftover=leftover, 
+        #         ft=ft, 
+        #         regression=regression, 
+        #         verbose=verbose, 
+        #         smooth=smooth, 
+        #         model=model,
+        #     )
+        #     selected.append(station_ix)
+        #     leftover.remove(station_ix)
+        #     tot_err.append(err)
+        
+        # else:
+        station_ix, err = _get_Best_Station(
+            X=X, 
+            y=y, 
+            xx=xx, 
+            ref=ref, 
+            selected=selected, 
+            leftover=leftover, 
+            ft=ft, 
+            regression=regression, 
+            verbose=verbose, 
+            smooth=smooth, 
+            model=model,
+        )
+        selected.append(station_ix)
+        leftover.remove(station_ix)
+        tot_err.append(err)
+    
+    preprocess_logger.info(f"{selected = }")
+    
     return selected, tot_err

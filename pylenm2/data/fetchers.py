@@ -33,8 +33,8 @@ def _get_individual_analyte_df(data, dates, analyte):
     sample = data[analyte]
     sample_analyte = pd.DataFrame(sample, index=dates, columns=sample.index)
     
-    for well in sample.index:
-        sample_analyte[well] = sample[well]
+    for station in sample.index:
+        sample_analyte[station] = sample[station]
     
     return sample_analyte
 
@@ -49,7 +49,7 @@ def _getLagDate(date, lagDays=7):
 
 
 def getCleanData(data_pylenm_dm, analytes):
-    """Creates a table filling the data from the concentration dataset for a given analyte list where the columns are multi-indexed as follows [analytes, well names] and the index is all of the dates in the dataset. Many NaN should be expected.
+    """Creates a table filling the data from the concentration dataset for a given analyte list where the columns are multi-indexed as follows [analytes, station names] and the index is all of the dates in the dataset. Many NaN should be expected.
 
     Args:
         data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
@@ -80,7 +80,7 @@ def getCommonDates(
         analytes, 
         lag=[3,7,10],
     ) -> pd.DataFrame:
-    """Creates a table which counts the number of wells within a range specified by a list of lag days.
+    """Creates a table which counts the number of stations within a range specified by a list of lag days.
     TODO: Very slow. Check if efficiency can be improved.
 
     Args:
@@ -99,7 +99,7 @@ def getCommonDates(
     dates = piv.index
     names=['Dates', 'Lag']
     tuples = [dates, lag]
-    finalData = pd.DataFrame(index=pd.MultiIndex.from_product(tuples, names=names), columns=['Date Ranges', 'Number of wells'])
+    finalData = pd.DataFrame(index=pd.MultiIndex.from_product(tuples, names=names), columns=['Date Ranges', 'Number of stations'])
     
     for date in dates:
         for i in lag:
@@ -107,10 +107,10 @@ def getCommonDates(
             dateStart, dateEnd = _getLagDate(date, lagDays=i)
             mask = (piv.index > dateStart) & (piv.index <= dateEnd)
             result = piv[mask].dropna(axis=1, how='all')
-            numWells = len(list(result.columns.get_level_values(1).unique()))
+            numStations = len(list(result.columns.get_level_values(1).unique()))
             dateRange = str(dateStart.date()) + " - " + str(dateEnd.date())
             finalData.loc[date, i]['Date Ranges'] = dateRange
-            finalData.loc[date, i]['Number of wells'] = numWells
+            finalData.loc[date, i]['Number of stations'] = numStations
     
     return finalData
 
@@ -120,7 +120,7 @@ def getJointData(
         analytes, 
         lag=3,
     ) -> pd.DataFrame:
-    """Creates a table filling the data from the concentration dataset for a given analyte list where the columns are multi-indexed as follows [analytes, well names] and the index is the date ranges secified by the lag.
+    """Creates a table filling the data from the concentration dataset for a given analyte list where the columns are multi-indexed as follows [analytes, station names] and the index is the date ranges secified by the lag.
 
     TODO: Replace current progress implementation with tqdm.
 
@@ -172,8 +172,8 @@ def getJointData(
         if(resultCollapse.shape[0]>1):
             resultCollapse = pd.DataFrame(resultCollapse.mean()).T
         resultCollapse = resultCollapse.rename(index={0: dateRange})
-        for ana_well in resultCollapse.columns:
-            finalData.loc[dateRange, ana_well] =  resultCollapse.loc[dateRange, ana_well]
+        for ana_station in resultCollapse.columns:
+            finalData.loc[dateRange, ana_station] =  resultCollapse.loc[dateRange, ana_station]
     
         # Save data to the pylenm global variable
         # data_pylenm_dm.__set_jointData(data=finalData, lag=lag)
@@ -195,7 +195,7 @@ def get_analyte_details(
         save_to_file = False, 
         save_dir='analyte_details',
     ):
-    """Returns a csv file saved to save_dir with details pertaining to the specified analyte. Details include the well names, the date ranges and the number of unique samples.
+    """Returns a csv file saved to save_dir with details pertaining to the specified analyte. Details include the station names, the date ranges and the number of unique samples.
 
     TODO: Handle error returns better!
 
@@ -209,7 +209,7 @@ def get_analyte_details(
         save_dir (str, optional): name of the directory you want to save the csv file to. Defaults to 'analyte_details'.
 
     Returns:
-        pd.DataFrame: Table with well information
+        pd.DataFrame: Table with station information
     """
     data = data_pylenm_dm.data
     data = data[data.ANALYTE_NAME == analyte_name].reset_index().drop('index', axis=1)
@@ -226,31 +226,31 @@ def get_analyte_details(
             fetchers_logger.error("Ran into ERROR when calling filter_by_column()!")
             return filter_res
         
-        query_wells = list(data.STATION_ID.unique())
-        filter_wells = list(filter_res.index.unique())
-        intersect_wells = list(set(query_wells) & set(filter_wells))
-        if(len(intersect_wells)<=0):
+        query_stations = list(data.STATION_ID.unique())
+        filter_stations = list(filter_res.index.unique())
+        intersect_stations = list(set(query_stations) & set(filter_stations))
+        if(len(intersect_stations)<=0):
             fetchers_logger.error('ERROR: No results for this query with the specifed filter parameters.')
             return 'ERROR: No results for this query with the specifed filter parameters.'
-        data = data[data['STATION_ID'].isin(intersect_wells)]        
+        data = data[data['STATION_ID'].isin(intersect_stations)]        
 
     info = []
-    wells = np.unique(data.STATION_ID.values)
-    for well in wells:
-        current = data[data.STATION_ID == well]
+    stations = np.unique(data.STATION_ID.values)
+    for station in stations:
+        current = data[data.STATION_ID == station]
         startDate = current.COLLECTION_DATE.min().date()
         endDate = current.COLLECTION_DATE.max().date()
         numSamples = current.duplicated().value_counts()[0]
         info.append({
-            'Well Name': well, 
+            'Station Name': station, 
             'Start Date': startDate, 
             'End Date': endDate,
             'Date Range (days)': endDate-startDate ,
             'Unique samples': numSamples,
         })
     details = pd.DataFrame(info)
-    details.index = details['Well Name']
-    details = details.drop('Well Name', axis=1)
+    details.index = details['Station Name']
+    details = details.drop('Station Name', axis=1)
     details = details.sort_values(by=['Start Date', 'End Date'])
     details['Date Range (days)'] = (details['Date Range (days)']/ np.timedelta64(1, 'D')).astype(int)
     if(save_to_file):
@@ -276,14 +276,14 @@ def get_data_summary(
     Args:
         data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
         analytes (list, optional): list of analyte names to be processed. If left empty, a list of all the analytes in the data will be used. Defaults to None.
-        sort_by (str, optional): {‘date’, ‘samples’, ‘wells’} sorts the data by either the dates by entering: ‘date’, the samples by entering: ‘samples’, or by unique well locations by entering ‘wells’. Defaults to 'date'.
+        sort_by (str, optional): {‘date’, ‘samples’, ‘stations’} sorts the data by either the dates by entering: ‘date’, the samples by entering: ‘samples’, or by unique station locations by entering ‘stations’. Defaults to 'date'.
         ascending (bool, optional): flag to sort in ascending order.. Defaults to False.
         filter (bool, optional): flag to indicate filtering. Defaults to False.
         col (str, optional): column to filter. Example: col='STATION_ID'. Defaults to None.
         equals (list, optional): values to filter col by. Examples: equals=['FAI001A', 'FAI001B']. Defaults to [].
 
     Returns:
-        pd.DataFrame: Table with well information
+        pd.DataFrame: Table with station information
     """
     data = data_pylenm_dm.data
     if(analytes == None):
@@ -302,13 +302,13 @@ def get_data_summary(
             fetchers_logger.error("Ran into ERROR when calling filter_by_column()!")
             return filter_res
         
-        query_wells = list(data.STATION_ID.unique())
-        filter_wells = list(filter_res.index.unique())
-        intersect_wells = list(set(query_wells) & set(filter_wells))
-        if(len(intersect_wells)<=0):
+        query_stations = list(data.STATION_ID.unique())
+        filter_stations = list(filter_res.index.unique())
+        intersect_stations = list(set(query_stations) & set(filter_stations))
+        if(len(intersect_stations)<=0):
             fetchers_logger.error('ERROR: No results for this query with the specifed filter parameters.')
             return 'ERROR: No results for this query with the specifed filter parameters.'
-        data = data[data['STATION_ID'].isin(intersect_wells)]
+        data = data[data['STATION_ID'].isin(intersect_stations)]
 
     info = []
     for analyte_name in analytes:
@@ -316,7 +316,7 @@ def get_data_summary(
         startDate = min(query.COLLECTION_DATE)
         endDate = max(query.COLLECTION_DATE)
         numSamples = query.shape[0]
-        wellCount = len(query.STATION_ID.unique())
+        stationCount = len(query.STATION_ID.unique())
         stats = query.RESULT.describe().drop('count', axis=0)
         stats = pd.DataFrame(stats).T
         stats_col = [x for x in stats.columns]
@@ -326,7 +326,7 @@ def get_data_summary(
             'Start Date': startDate, 
             'End Date': endDate, 
             'Date Range (days)':endDate-startDate, 
-            '# unique wells': wellCount, 
+            '# unique stations': stationCount, 
             '# samples': numSamples, 
             'Unit': data_pylenm_dm.get_unit(analyte_name), 
         }
@@ -342,24 +342,24 @@ def get_data_summary(
         details = details.sort_values(by=['Start Date', 'End Date', 'Date Range (days)'], ascending=ascending)
     elif(sort_by.lower() == 'samples'):
         details = details.sort_values(by=['# samples'], ascending=ascending)
-    elif(sort_by.lower() == 'wells'):
-        details = details.sort_values(by=['# unique wells'], ascending=ascending)
+    elif(sort_by.lower() == 'stations'):
+        details = details.sort_values(by=['# unique stations'], ascending=ascending)
 
     return details
 
 
-def get_well_analytes(
+def get_station_analytes(
         data_pylenm_dm, 
-        well_names=None, 
+        station_names=None, 
         filter=False, 
         col=None, 
         equals=[],
     ):
-    """Displays the analyte names available at given well locations.
+    """Displays the analyte names available at given station locations.
 
     Args:
         data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
-        well_names (str, List[str], optional): names of the well. If left empty, all wells are returned. The input can either be a str, List[str], or None. Defaults to None.
+        station_names (str, List[str], optional): names of the station. If left empty, all stations are returned. The input can either be a str, List[str], or None. Defaults to None.
         filter (bool, optional): flag to indicate filtering. Defaults to False.
         col (str, optional): column to filter. Example: col='STATION_ID'. Defaults to None.
         equals (list, optional): values to filter col by. Examples: equals=['FAI001A', 'FAI001B']. Defaults to [].
@@ -382,33 +382,33 @@ def get_well_analytes(
             fetchers_logger.error("Ran into ERROR when calling filter_by_column()!")
             return filter_res
         
-        query_wells = list(data.STATION_ID.unique())
-        filter_wells = list(filter_res.index.unique())
-        intersect_wells = list(set(query_wells) & set(filter_wells))
-        if(len(intersect_wells)<=0):
+        query_stations = list(data.STATION_ID.unique())
+        filter_stations = list(filter_res.index.unique())
+        intersect_stations = list(set(query_stations) & set(filter_stations))
+        if(len(intersect_stations)<=0):
             fetchers_logger.error('ERROR: No results for this query with the specifed filter parameters.')
             return 'ERROR: No results for this query with the specifed filter parameters.'
-        data = data[data['STATION_ID'].isin(intersect_wells)]
+        data = data[data['STATION_ID'].isin(intersect_stations)]
     
-    if(well_names==None):
-        wells = list(data.STATION_ID.unique())
-    elif isinstance(well_names, str):
-        wells = [well_names]
-    elif isinstance(well_names, list):
-        if len(well_names) > 0:
-            wells = well_names
+    if(station_names==None):
+        stations = list(data.STATION_ID.unique())
+    elif isinstance(station_names, str):
+        stations = [station_names]
+    elif isinstance(station_names, list):
+        if len(station_names) > 0:
+            stations = station_names
         else:
-            wells = list(data.STATION_ID.unique())
+            stations = list(data.STATION_ID.unique())
     else:
-        fetchers_logger.error("Invalid input for well_names! The input should either be a str, List[str], or None.")
-        raise ValueError("Invalid input for well_names! The input should either be a str, List[str], or None.")
+        fetchers_logger.error("Invalid input for station_names! The input should either be a str, List[str], or None.")
+        raise ValueError("Invalid input for station_names! The input should either be a str, List[str], or None.")
     
-    well_analytes = dict()
-    for well in wells:
-        analytes = sorted(list(data[data.STATION_ID==well].ANALYTE_NAME.unique()))
+    station_analytes = dict()
+    for station in stations:
+        analytes = sorted(list(data[data.STATION_ID==station].ANALYTE_NAME.unique()))
         
-        fetchers_logger.debug(f"{bb}{str(well)}{be}: {str(analytes)}")
+        fetchers_logger.debug(f"{bb}{str(station)}{be}: {str(analytes)}")
 
-        well_analytes[well] = analytes
+        station_analytes[station] = analytes
 
-    return well_analytes
+    return station_analytes

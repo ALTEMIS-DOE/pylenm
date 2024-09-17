@@ -46,7 +46,7 @@ def plot_PCA_by_date(
         n_clusters (int, optional): number of clusters to split the data into.. Defaults to 4.
         return_clusters (bool, optional): Flag to return the cluster data to be used for spatial plotting.. Defaults to False.
         min_samples (int, optional): minimum number of samples the result should contain in order to execute.. Defaults to 3.
-        show_labels (bool, optional): choose whether or not to show the name of the wells.. Defaults to True.
+        show_labels (bool, optional): choose whether or not to show the name of the stations.. Defaults to True.
         save_dir (str, optional): name of the directory you want to save the plot to. Defaults to 'plot_PCA_by_date'.
         filter (bool, optional): flag to indicate filtering. Defaults to False.
         col (str, optional): column to filter. Example: col='STATION_ID'. Defaults to None.
@@ -76,15 +76,15 @@ def plot_PCA_by_date(
             if filter_res is None:
                 return None
 
-            query_wells = list(query.STATION_ID.unique())
-            filter_wells = list(filter_res.index.unique())
-            intersect_wells = list(set(query_wells) & set(filter_wells))
-            if len(intersect_wells) <= 0:
+            query_stations = list(query.STATION_ID.unique())
+            filter_stations = list(filter_res.index.unique())
+            intersect_stations = list(set(query_stations) & set(filter_stations))
+            if len(intersect_stations) <= 0:
                 plot_pca_logger.error("ERROR: No results for this query with the specifed filter parameters.")
                 # return 'ERROR: No results for this query with the specifed filter parameters.'
                 return None
             
-            query = query[query['STATION_ID'].isin(intersect_wells)]
+            query = query[query['STATION_ID'].isin(intersect_stations)]
         
         a = list(np.unique(query.ANALYTE_NAME.values))  # get all analytes from dataset
         
@@ -205,7 +205,7 @@ def plot_PCA_by_date(
             scatt_X, 
             scatt_Y, 
             alpha=0.8, 
-            label='Wells', 
+            label='Stations', 
             c=c,
         )
         centers = plt.scatter(
@@ -246,7 +246,7 @@ def plot_PCA_by_date(
                 )
         plt.legend(
             [scatter, centers, arrow], 
-            ['Wells', 'Well centroids','Loadings'],
+            ['Stations', 'Station centroids','Loadings'],
         )
 
     samples = x_new.shape[0] * piv.shape[1]
@@ -256,8 +256,8 @@ def plot_PCA_by_date(
     ax.text(
         1.1, 
         0.5, 
-        # 'Date:  {}\n\nSamples:          {}\nWells:               {}'.format(date, samples, x_new.shape[0]), 
-        f"Date: {date}\n\nSamples: {samples}\nWells: {x_new.shape[0]}",
+        # 'Date:  {}\n\nSamples:          {}\nStations:               {}'.format(date, samples, x_new.shape[0]), 
+        f"Date: {date}\n\nSamples: {samples}\nStations: {x_new.shape[0]}",
         transform=ax.transAxes, 
         fontsize=20, 
         fontweight='bold', 
@@ -294,14 +294,14 @@ def plot_PCA_by_date(
     # Return clusters (if specified)
     if(return_clusters):
         stations = list(main_data.index)
-        color_wells = list(pca_points.color)
+        color_stations = list(pca_points.color)
         
         def merge(list1, list2): 
             merged_list = [(list1[i], list2[i]) for i in range(0, len(list1))] 
             return merged_list
         
         color_df = pd.DataFrame(
-            merge(stations, color_wells), 
+            merge(stations, color_stations), 
             columns=['STATION_ID', 'color'],
         )
         
@@ -343,7 +343,7 @@ def plot_PCA_by_year(
         n_clusters (int, optional): number of clusters to split the data into.. Defaults to 4.
         return_clusters (bool, optional): Flag to return the cluster data to be used for spatial plotting.. Defaults to False.
         min_samples (int, optional): minimum number of samples the result should contain in order to execute.. Defaults to 3.
-        show_labels (bool, optional): choose whether or not to show the name of the wells.. Defaults to True.
+        show_labels (bool, optional): choose whether or not to show the name of the stations.. Defaults to True.
         save_dir (str, optional): name of the directory you want to save the plot to. Defaults to 'plot_PCA_by_date'.
         filter (bool, optional): flag to indicate filtering. Defaults to False.
         col (str, optional): column to filter. Example: col='STATION_ID'. Defaults to None.
@@ -372,16 +372,16 @@ def plot_PCA_by_year(
         if filter_res is None:
             return None
 
-        query_wells = list(query.STATION_ID.unique())
-        filter_wells = list(filter_res.index.unique())
-        intersect_wells = list(set(query_wells) & set(filter_wells))
+        query_stations = list(query.STATION_ID.unique())
+        filter_stations = list(filter_res.index.unique())
+        intersect_stations = list(set(query_stations) & set(filter_stations))
 
-        if len(intersect_wells) <= 0:
+        if len(intersect_stations) <= 0:
             plot_pca_logger.error("ERROR: No results for this query with the specifed filter parameters.")
             # return 'ERROR: No results for this query with the specifed filter parameters.'
             return None
         
-        query = query[query['STATION_ID'].isin(intersect_wells)]
+        query = query[query['STATION_ID'].isin(intersect_stations)]
     
     a = list(np.unique(query.ANALYTE_NAME.values))  # get all analytes from dataset
     
@@ -421,8 +421,8 @@ def plot_PCA_by_year(
         main_data = piv.dropna()
         # # FILTERING CODE
         # if(filter):
-        #     res_wells = self.filter_wells(filter_well_by)
-        #     main_data = main_data.loc[main_data.index.isin(res_wells)]
+        #     res_stations = self.filter_stations(filter_station_by)
+        #     main_data = main_data.loc[main_data.index.isin(res_stations)]
         
         # Fit PCA and KMeans models
         scaler = StandardScaler()
@@ -470,7 +470,7 @@ def plot_PCA_by_year(
                 scatt_X, 
                 scatt_Y, 
                 alpha=0.8, 
-                label='Wells', 
+                label='Stations', 
                 c=c,
             )
             centers = plt.scatter(
@@ -511,7 +511,7 @@ def plot_PCA_by_year(
                     )       # Vertical alignment is centered
             plt.legend(
                 [scatter, centers, arrow], 
-                ['Wells', 'Well centroids','Loadings'],
+                ['Stations', 'Station centroids','Loadings'],
             )
 
         samples = x_new.shape[0]*piv.shape[1]    
@@ -521,8 +521,8 @@ def plot_PCA_by_year(
         ax.text(
             1.1, 
             0.5, 
-            # 'Date:  {}\n\nSamples:          {}\nWells:               {}'.format(year,samples, x_new.shape[0]), 
-            f"Year: {year}\n\nSamples: {samples}\nWells: {x_new.shape[0]}",
+            # 'Date:  {}\n\nSamples:          {}\nStations:               {}'.format(year,samples, x_new.shape[0]), 
+            f"Year: {year}\n\nSamples: {samples}\nStations: {x_new.shape[0]}",
             transform=ax.transAxes, 
             fontsize=20, 
             fontweight='bold', 
@@ -559,7 +559,7 @@ def plot_PCA_by_year(
         # Return clusters (if specified)
         if(return_clusters):
             stations = list(main_data.index)
-            color_wells = list(pca_points.color)
+            color_stations = list(pca_points.color)
             
             def merge(list1, list2): 
                 merged_list = [
@@ -569,7 +569,7 @@ def plot_PCA_by_year(
                 return merged_list
             
             color_df = pd.DataFrame(
-                merge(stations, color_wells), 
+                merge(stations, color_stations), 
                 columns=['STATION_ID', 'color'],
             )
             
@@ -588,33 +588,33 @@ def plot_PCA_by_year(
                 return gps_color
 
 
-def plot_PCA_by_well(
+def plot_PCA_by_station(
         # self, 
         data_pylenm_dm, 
-        well_name, 
+        station_name, 
         analytes, 
         interpolate=False, 
         frequency='2W', 
         min_samples=10, 
         show_labels=True, 
-        save_dir='plot_PCA_by_well',
+        save_dir='plot_PCA_by_station',
     ):
-    """Gernates a PCA biplot (PCA score plot + loading plot) of the data given a well_name in the dataset. Only uses the 6 important analytes.
+    """Gernates a PCA biplot (PCA score plot + loading plot) of the data given a station_name in the dataset. Only uses the 6 important analytes.
 
     Args:
         data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
-        well_name (str): name of the well to be processed
+        station_name (str): name of the station to be processed
         analytes (str): list of analyte names to use
         interpolate (bool, optional): choose to interpolate the data. Defaults to False.
         frequency (str, optional): {‘D’, ‘W’, ‘M’, ‘Y’} frequency to interpolate. See https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html for valid frequency inputs. (e.g. ‘W’ = every week, ‘D ’= every day, ‘2W’ = every 2 weeks). Defaults to '2W'.
         min_samples (int, optional): minimum number of samples the result should contain in order to execute.. Defaults to 3.
-        show_labels (bool, optional): choose whether or not to show the name of the wells.. Defaults to True.
+        show_labels (bool, optional): choose whether or not to show the name of the stations.. Defaults to True.
         save_dir (str, optional): name of the directory you want to save the plot to. Defaults to 'plot_PCA_by_date'.
     """
 
     # data = self.data
     data = data_pylenm_dm.data
-    query = data[data.STATION_ID == well_name]
+    query = data[data.STATION_ID == station_name]
     a = list(np.unique(query.ANALYTE_NAME.values))# get all analytes from dataset
     
     for value in analytes:
@@ -637,17 +637,17 @@ def plot_PCA_by_well(
     
     # Interpolate (if specified)
     if(interpolate):
-        # piv = self.interpolate_well_data(well_name, analytes, frequency=frequency)
-        piv = transformation.interpolate_well_data(
-            well_name, 
+        # piv = self.interpolate_station_data(station_name, analytes, frequency=frequency)
+        piv = transformation.interpolate_station_data(
+            station_name, 
             analytes, 
             frequency=frequency,
         )
-        # title = 'PCA Biplot - ' + well_name + ' - interpolated every ' + frequency
-        title = f"PCA Biplot - {well_name} - interpolated every {frequency}."
+        # title = 'PCA Biplot - ' + station_name + ' - interpolated every ' + frequency
+        title = f"PCA Biplot - {station_name} - interpolated every {frequency}."
     else:
-        # title = 'PCA Biplot - ' + well_name
-        title = f"PCA Biplot - {well_name}"
+        # title = 'PCA Biplot - ' + station_name
+        title = f"PCA Biplot - {station_name}"
 
     if query.shape[0] == 0:
         plot_pca_logger.error(f"ERROR: {date} has no data for the 6 analytes.")
@@ -661,7 +661,7 @@ def plot_PCA_by_well(
         return None
     
     # if(len(np.unique(query.ANALYTE_NAME.values)) < 6):
-    #     return 'ERROR: {} has less than the 6 analytes we want to analyze.'.format(well_name)
+    #     return 'ERROR: {} has less than the 6 analytes we want to analyze.'.format(station_name)
     else:
         
         # Scale the values

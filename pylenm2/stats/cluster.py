@@ -18,11 +18,12 @@ cluster_logger = logger_config.setup_logging(
 )
 
 
-def __cluster_data_OLD(self, data, n_clusters=4, log_transform=False, filter=False, filter_well_by=['D'], return_clusters=False):
+# NOT in use!
+def __cluster_data_OLD(self, data, n_clusters=4, log_transform=False, filter=False, filter_station_by=['D'], return_clusters=False):
     if(filter):
-        res_wells = self.filter_wells(filter_well_by)
+        res_stations = self.filter_stations(filter_station_by)
         data = data.T
-        data = data.loc[data.index.isin(res_wells)]
+        data = data.loc[data.index.isin(res_stations)]
         data = data.T
     if(log_transform):
         data = np.log10(data)
@@ -99,19 +100,19 @@ def cluster_data(
         if filter_res is None:
             return None
         
-        query_wells = list(data.columns)
-        filter_wells = list(filter_res.index.unique())
-        intersect_wells = list(set(query_wells) & set(filter_wells))
+        query_stations = list(data.columns)
+        filter_stations = list(filter_res.index.unique())
+        intersect_stations = list(set(query_stations) & set(filter_stations))
         
-        cluster_logger.info(f"{intersect_wells = }")
-        cluster_logger.info(f"{len(intersect_wells) = }")
+        cluster_logger.info(f"{intersect_stations = }")
+        cluster_logger.info(f"{len(intersect_stations) = }")
         
-        if len(intersect_wells) <= 0:
+        if len(intersect_stations) <= 0:
             # return 'ERROR: No results for this query with the specifed filter parameters.'
             cluster_logger.error("ERROR: No results for this query with the specifed filter parameters.")
             return None
 
-        data = data[intersect_wells]
+        data = data[intersect_stations]
     
     data.index = date2num(data.index)
     temp = data.T

@@ -52,9 +52,9 @@ def _format_ticks_and_labels(axes, fontsize):
         )
 
 
-def plot_corr_by_well(
+def plot_corr_by_station(
         data_pylenm_dm, 
-        well_name, 
+        station_name, 
         analytes, 
         remove_outliers=True, 
         z_threshold=4, 
@@ -67,11 +67,11 @@ def plot_corr_by_well(
         remove=[], 
         no_log=None,
     ):
-    """Plots the correlations with the physical plots as well as the correlations of the important analytes over time for a specified well.
+    """Plots the correlations with the physical plots as station as the correlations of the important analytes over time for a specified station.
 
     Args:
         data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
-        well_name (str): name of the well to be processed
+        station_name (str): name of the station to be processed
         analytes (list): list of analyte names to use
         remove_outliers (bool, optional): choose whether or to remove the outliers. Defaults to True.
         z_threshold (int, optional): z_score threshold to eliminate outliers. Defaults to 4.
@@ -81,7 +81,7 @@ def plot_corr_by_well(
         log_transform (bool, optional): flag for log base 10 transformation. Defaults to False.
         fontsize (int, optional): font size. Defaults to 20.
         returnData (bool, optional): flag to return data used to perfrom correlation analysis. Defaults to False.
-        remove (list, optional): wells to remove. Defaults to [].
+        remove (list, optional): stations to remove. Defaults to [].
         no_log (list, optional): list of column names to not apply log transformation to. Defaults to None.
 
     Returns:
@@ -90,7 +90,7 @@ def plot_corr_by_well(
     
     # Prepare data
     data = data_pylenm_dm.data
-    query = data[data.STATION_ID == well_name]
+    query = data[data.STATION_ID == station_name]
     a = list(np.unique(query.ANALYTE_NAME.values))# get all analytes from dataset
     
     for value in analytes:
@@ -114,31 +114,31 @@ def plot_corr_by_well(
     
     # Interpolate (if specified) and define file extension and titles
     if(interpolate):
-        piv = transformation.interpolate_well_data(
+        piv = transformation.interpolate_station_data(
             data_pylenm_dm=data_pylenm_dm,
-            well_name=well_name, 
+            station_name=station_name, 
             analytes=analytes, 
             frequency=frequency,
         )
         # file_extension = '_interpolated_' + frequency
         file_extension = f"_interpolated_{frequency}"
-        # title = well_name + '_correlation - interpolated every ' + frequency
-        title = f"{well_name}_correlation - interpolated every {frequency}"
+        # title = station_name + '_correlation - interpolated every ' + frequency
+        title = f"{station_name}_correlation - interpolated every {frequency}"
     else:
         file_extension = "_correlation"
-        # title = well_name + '_correlation'
-        title = f"{well_name}_correlation"
+        # title = station_name + '_correlation'
+        title = f"{station_name}_correlation"
     samples = piv.shape[0]
     
     # Plot if there are enough samples
     if(samples < 5):
         if(interpolate):
-            # return 'ERROR: {} does not have enough samples to plot.\n Try a different interpolation frequency'.format(well_name)
-            plot_corr_logger.error(f"ERROR: {well_name} does not have enough samples to plot.\n Try a different interpolation frequency")
+            # return 'ERROR: {} does not have enough samples to plot.\n Try a different interpolation frequency'.format(station_name)
+            plot_corr_logger.error(f"ERROR: {station_name} does not have enough samples to plot.\n Try a different interpolation frequency")
             return None
         
-        # return 'ERROR: {} does not have enough samples to plot.'.format(well_name)
-        plot_corr_logger.error(f"ERROR: {well_name} does not have enough samples to plot.")
+        # return 'ERROR: {} does not have enough samples to plot.'.format(station_name)
+        plot_corr_logger.error(f"ERROR: {station_name} does not have enough samples to plot.")
         return None
 
     else:
@@ -250,8 +250,8 @@ def plot_corr_by_well(
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
         g.figure.savefig(
-            # save_dir + '/' + well_name + file_extension + '.png', 
-            f"{save_dir}/{well_name}{file_extension}.png", 
+            # save_dir + '/' + station_name + file_extension + '.png', 
+            f"{save_dir}/{station_name}{file_extension}.png", 
             bbox_inches="tight",
         )
         
@@ -261,7 +261,7 @@ def plot_corr_by_well(
         return piv
     
 
-def plot_all_corr_by_well(
+def plot_all_corr_by_station(
         # self, 
         data_pylenm_dm,
         analytes, 
@@ -273,7 +273,7 @@ def plot_all_corr_by_well(
         log_transform=False, 
         fontsize=20,
     ):
-    """Plots the correlations with the physical plots as well as the important analytes over time for each well in the dataset.
+    """Plots the correlations with the physical plots as station as the important analytes over time for each station in the dataset.
 
     Args:
         data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
@@ -290,13 +290,13 @@ def plot_all_corr_by_well(
     # data = self.data
     data = data_pylenm_dm.data
     
-    wells = np.array(data.STATION_ID.values)
-    wells = np.unique(wells)
+    stations = np.array(data.STATION_ID.values)
+    stations = np.unique(stations)
     
-    for well in wells:
-        plot_corr_by_well(
+    for station in stations:
+        plot_corr_by_station(
             data_pylenm_dm=data_pylenm_dm,
-            well_name=well, 
+            station_name=station, 
             analytes=analytes,remove_outliers=remove_outliers, 
             z_threshold=z_threshold, 
             interpolate=interpolate, 
@@ -320,7 +320,7 @@ def plot_corr_by_date_range(
         # returnData=False, 
         no_log=None,
     ):
-    """Plots the correlations with the physical plots as well as the correlations of the important analytes for ALL the wells on a specified date or range of dates if a lag greater than 0 is specifed.
+    """Plots the correlations with the physical plots as station as the correlations of the important analytes for ALL the stations on a specified date or range of dates if a lag greater than 0 is specifed.
 
     Args:
         data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
@@ -488,8 +488,8 @@ def plot_corr_by_date_range(
     props = dict(boxstyle='round', facecolor='grey', alpha=0.15)
     ax.text(
         1.3, 6.2, 
-        f"Date: {date}\n\nWells: {piv.shape[0]}\nSamples used: {samples}",
-        # 'Date:  {}\n\nWells:     {}\nSamples used:     {}'.format(date, piv.shape[0] ,samples), 
+        f"Date: {date}\n\nStations: {piv.shape[0]}\nSamples used: {samples}",
+        # 'Date:  {}\n\nStations:     {}\nSamples used:     {}'.format(date, piv.shape[0] ,samples), 
         transform=ax.transAxes, 
         fontsize=fontsize, 
         fontweight='bold', 
@@ -530,7 +530,7 @@ def plot_corr_by_year(
         returnData=False, 
         no_log=None,
     ):
-    """Plots the correlations with the physical plots as well as the correlations of the important analytes for ALL the wells in specified year.
+    """Plots the correlations with the physical plots as station as the correlations of the important analytes for ALL the stations in specified year.
 
     Args:
         data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.

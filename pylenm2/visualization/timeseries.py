@@ -28,7 +28,7 @@ def plot_all_time_series_simple(
         start_date=None, 
         end_date=None, 
         title='Dataset: Time ranges', 
-        x_label='Well', 
+        x_label='Station', 
         y_label='Year',
         min_days=10, 
         x_min_lim=-5, 
@@ -40,7 +40,7 @@ def plot_all_time_series_simple(
         col=None, 
         equals=[],
     ):
-    """Plots the start and end date of analyte readings for differnt locations/sensors/wells.
+    """Plots the start and end date of analyte readings for differnt locations/sensors/stations.
 
     Args:
         data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
@@ -48,7 +48,7 @@ def plot_all_time_series_simple(
         start_date (str, optional): start date of horizontal time to show alignment. Defaults to None.
         end_date (str, optional): end date of horizontal time to show alignment.. Defaults to None.
         title (str, optional): plot title. Defaults to 'Dataset: Time ranges'.
-        x_label (str, optional): x axis label. Defaults to 'Well'.
+        x_label (str, optional): x axis label. Defaults to 'Station'.
         y_label (str, optional): y axis label. Defaults to 'Year'.
         min_days (int, optional): minimum number of days required to plot the time series . Defaults to 10.
         x_min_lim (int, optional): x axis starting point. Defaults to -5.
@@ -75,57 +75,57 @@ def plot_all_time_series_simple(
             timeseries_logger.error("Ran into ERROR when calling filter_by_column()!")
             return filter_res
         
-        query_wells = list(data.STATION_ID.unique())
-        filter_wells = list(filter_res.index.unique())
-        intersect_wells = list(set(query_wells) & set(filter_wells))
-        if(len(intersect_wells)<=0):
+        query_stations = list(data.STATION_ID.unique())
+        filter_stations = list(filter_res.index.unique())
+        intersect_stations = list(set(query_stations) & set(filter_stations))
+        if(len(intersect_stations)<=0):
             timeseries_logger.error('ERROR: No results for this query with the specifed filter parameters.')
             return 'ERROR: No results for this query with the specifed filter parameters.'
         
-        data = data[data['STATION_ID'].isin(intersect_wells)]
+        data = data[data['STATION_ID'].isin(intersect_stations)]
 
     # Preparing data
     # -----------------
     if(analyte_name!=None):
         data = data[data.ANALYTE_NAME == analyte_name]
     
-    wells = data.STATION_ID.unique()
-    wells_dateRange=pd.DataFrame(columns=['STATION_ID','START_DATE','END_DATE'])
-    for i in range(len(wells)):
-        wellName=wells[i]
-        wellNamedData=data[data['STATION_ID']==wells[i]]
-        minDate=min(wellNamedData['COLLECTION_DATE'])
-        maxDate=max(wellNamedData['COLLECTION_DATE'])
-        wells_dateRange.loc[wells_dateRange.shape[0]]=[wellName,minDate,maxDate]
+    stations = data.STATION_ID.unique()
+    stations_dateRange=pd.DataFrame(columns=['STATION_ID','START_DATE','END_DATE'])
+    for i in range(len(stations)):
+        stationName=stations[i]
+        stationNamedData=data[data['STATION_ID']==stations[i]]
+        minDate=min(stationNamedData['COLLECTION_DATE'])
+        maxDate=max(stationNamedData['COLLECTION_DATE'])
+        stations_dateRange.loc[stations_dateRange.shape[0]]=[stationName,minDate,maxDate]
 
-    wells_dateRange["RANGE"] = wells_dateRange.END_DATE - wells_dateRange.START_DATE
+    stations_dateRange["RANGE"] = stations_dateRange.END_DATE - stations_dateRange.START_DATE
     
-    # wells_dateRange.RANGE = wells_dateRange.RANGE.astype('timedelta64[D]').astype('int')
-    # wells_dateRange = wells_dateRange[wells_dateRange.RANGE>min_days]
-    wells_dateRange = wells_dateRange[wells_dateRange.RANGE.dt.days>min_days]
+    # stations_dateRange.RANGE = stations_dateRange.RANGE.astype('timedelta64[D]').astype('int')
+    # stations_dateRange = stations_dateRange[stations_dateRange.RANGE>min_days]
+    stations_dateRange = stations_dateRange[stations_dateRange.RANGE.dt.days>min_days]
     
-    wells_dateRange.sort_values(by=["RANGE","END_DATE","START_DATE"], ascending = (False, False, True), inplace=True)
-    wells_dateRange.reset_index(inplace=True)
-    wells_dateRange.drop('index', axis=1, inplace=True)
-    wells = np.array(wells_dateRange.STATION_ID)
+    stations_dateRange.sort_values(by=["RANGE","END_DATE","START_DATE"], ascending = (False, False, True), inplace=True)
+    stations_dateRange.reset_index(inplace=True)
+    stations_dateRange.drop('index', axis=1, inplace=True)
+    stations = np.array(stations_dateRange.STATION_ID)
 
     # Plotting
     # -----------------
     fig, ax = plt.subplots(1, 1, sharex=False,figsize=(20,6),dpi=300)
 
-    ax.set_xticks(range(len(wells)))
-    ax.set_xticklabels(wells, rotation='vertical', fontsize=6)
+    ax.set_xticks(range(len(stations)))
+    ax.set_xticklabels(stations, rotation='vertical', fontsize=6)
 
-    ax.plot(wells_dateRange['START_DATE'], c='blue', marker='o',lw=0, label='Start date')
-    ax.plot(wells_dateRange['END_DATE'], c='red', marker='o',lw=0, label='End date')
+    ax.plot(stations_dateRange['START_DATE'], c='blue', marker='o',lw=0, label='Start date')
+    ax.plot(stations_dateRange['END_DATE'], c='red', marker='o',lw=0, label='End date')
 
-    ax.hlines([max(wells_dateRange['END_DATE'])], x_min_lim, x_max_lim, colors='purple', label='Selected end date')
+    ax.hlines([max(stations_dateRange['END_DATE'])], x_min_lim, x_max_lim, colors='purple', label='Selected end date')
     if(start_date==None):
-        ax.hlines([min(wells_dateRange['START_DATE'])], x_min_lim, x_max_lim, colors='green', label='Selected start date')
+        ax.hlines([min(stations_dateRange['START_DATE'])], x_min_lim, x_max_lim, colors='green', label='Selected start date')
     else:
         ax.hlines([pd.to_datetime(start_date)], x_min_lim, x_max_lim, colors='green', label='Selected start date')
 
-    x_label = x_label + ' (count: ' + str(wells_dateRange.shape[0])+ ')'
+    x_label = x_label + ' (count: ' + str(stations_dateRange.shape[0])+ ')'
     ax.set_xlabel(x_label, fontsize=20)
     ax.set_ylabel(y_label, fontsize=20)   
     ax.set_xlim([x_min_lim, x_max_lim])
@@ -136,11 +136,11 @@ def plot_all_time_series_simple(
     if(analyte_name!=None):
         title = title + ' (' + analyte_name + ')'
     fig.suptitle(title, fontsize=20)
-    for i in range(wells_dateRange.shape[0]):
-        ax.vlines(i,wells_dateRange.loc[i,'START_DATE'],wells_dateRange.loc[i,'END_DATE'],colors='k')
+    for i in range(stations_dateRange.shape[0]):
+        ax.vlines(i,stations_dateRange.loc[i,'START_DATE'],stations_dateRange.loc[i,'END_DATE'],colors='k')
     
     if(return_data):
-        return wells_dateRange
+        return stations_dateRange
 
 
 def plot_all_time_series(
@@ -148,7 +148,7 @@ def plot_all_time_series(
         data_pylenm_dm,
         analyte_name=None, 
         title='Dataset: Time ranges', 
-        x_label='Well', 
+        x_label='Station', 
         y_label='Year', 
         x_label_size=8, 
         marker_size=30,
@@ -174,13 +174,13 @@ def plot_all_time_series(
         dpi=300, 
         y_2nd_label=None,
     ):      # TODO: Getting error in the notebook!
-    """Plots the start and end date of analyte readings for differnt locations/sensors/wells with colored concentration reading.
+    """Plots the start and end date of analyte readings for differnt locations/sensors/stations with colored concentration reading.
 
     Args:
         data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
         analyte_name (str, optional): analyte to examine. Defaults to None.
         title (str, optional): plot title. Defaults to 'Dataset: Time ranges'.
-        x_label (str, optional): x axis label. Defaults to 'Well'.
+        x_label (str, optional): x axis label. Defaults to 'Station'.
         y_label (str, optional): y axis label. Defaults to 'Year'.
         x_label_size (int, optional): x axis label font size. Defaults to 8.
         marker_size (int, optional): point size for time series. Defaults to 30.
@@ -193,7 +193,7 @@ def plot_all_time_series(
         source_coordinate (list, optional): Easting, Northing coordinate of source center. Defaults to [436642.70,3681927.09].
         log_transform (bool, optional): flag to toggle log base 10 transformation. Defaults to False.
         cmap (cmap, optional): color map for plotting. Defaults to mpl.cm.rainbow.
-        drop_cols (list, optional): columns, usually wells, to exclude. Defaults to [].
+        drop_cols (list, optional): columns, usually stations, to exclude. Defaults to [].
         return_data (bool, optional): flag to return data. Defaults to False.
         filter (bool, optional): flag to indicate filtering. Defaults to False.
         col (str, optional): column to filter. Example: col='STATION_ID'. Defaults to None.
@@ -227,42 +227,42 @@ def plot_all_time_series(
             timeseries_logger.error("Ran into ERROR when calling filter_by_column()!")
             return filter_res
         
-        query_wells = list(dt.columns.unique())
-        filter_wells = list(filter_res.index.unique())
-        intersect_wells = list(set(query_wells) & set(filter_wells) & set(dt.columns))
-        if(len(intersect_wells)<=0):
+        query_stations = list(dt.columns.unique())
+        filter_stations = list(filter_res.index.unique())
+        intersect_stations = list(set(query_stations) & set(filter_stations) & set(dt.columns))
+        if(len(intersect_stations)<=0):
             timeseries_logger.error('ERROR: No results for this query with the specifed filter parameters.')
             return 'ERROR: No results for this query with the specifed filter parameters.'
-        dt = dt[intersect_wells]
+        dt = dt[intersect_stations]
 
-    # Get well information
-    well_info = data_pylenm_dm.get_construction_data()
-    shared_wells = list(set(well_info.index) & set(dt.columns))
-    dt = dt[shared_wells]
-    well_info = well_info.T[shared_wells]
+    # Get station information
+    station_info = data_pylenm_dm.get_construction_data()
+    shared_stations = list(set(station_info.index) & set(dt.columns))
+    dt = dt[shared_stations]
+    station_info = station_info.T[shared_stations]
     dt = dt.reindex(sorted(dt.columns), axis=1)
-    well_info = well_info.reindex(sorted(well_info.columns), axis=1)
-    well_info = well_info.T
+    station_info = station_info.reindex(sorted(station_info.columns), axis=1)
+    station_info = station_info.T
     
     # Add distance to source
     transformer = Transformer.from_crs("epsg:4326", "epsg:26917") # Latitude/Longitude to UTM
-    UTM_x, UTM_y = transformer.transform(well_info.LATITUDE, well_info.LONGITUDE)
+    UTM_x, UTM_y = transformer.transform(station_info.LATITUDE, station_info.LONGITUDE)
     X = np.vstack((UTM_x,UTM_y)).T
-    well_info = pd.DataFrame(X, index=list(well_info.index),columns=['Easting', 'Northing'])
-    well_info = transformation.add_dist_to_source(
-        XX=well_info, 
+    station_info = pd.DataFrame(X, index=list(station_info.index),columns=['Easting', 'Northing'])
+    station_info = transformation.add_dist_to_source(
+        XX=station_info, 
         source_coordinate=source_coordinate,
     )
 
     # Sort by distance (if necessary)
     if(sort_by_distance):
-        well_info.sort_values(
+        station_info.sort_values(
             by=['dist_to_source'], 
             ascending=True, 
             inplace=True,
         )
     
-    dt = dt[well_info.index]
+    dt = dt[station_info.index]
 
     # except Exception as e:
     #     timeseries_logger.error(f"Error occurred but ignoring the error - {e}")
@@ -277,7 +277,7 @@ def plot_all_time_series(
         dt = np.log10(dt)
     
     # Plot data
-    wells = dt.columns
+    stations = dt.columns
     # if(cbar_min==None):
     #     cbar_min = dt.min().min()
     # if(cbar_max==None):
@@ -290,10 +290,10 @@ def plot_all_time_series(
         1, 2, sharex=False, figsize=figsize, dpi=dpi, 
         gridspec_kw={'width_ratios': [40, 1]},
     )
-    ax[0].set_xticks(range(len(wells)))
-    ax[0].set_xticklabels(wells, rotation='vertical', fontsize=x_label_size)
+    ax[0].set_xticks(range(len(stations)))
+    ax[0].set_xticklabels(stations, rotation='vertical', fontsize=x_label_size)
 
-    for col in wells:
+    for col in stations:
         curr_start = dt[col].first_valid_index()
         curr_end =  dt[col].last_valid_index()
         length = len(list(dt[col].loc[curr_start:curr_end].index))
@@ -313,9 +313,9 @@ def plot_all_time_series(
     # if(x_min_lim==None):
     #     x_min_lim = -5
     # if(x_max_lim==None):
-    #     x_max_lim = len(wells)+5
+    #     x_max_lim = len(stations)+5
     x_min_lim = -5 if x_min_lim is None else x_min_lim
-    x_max_lim = len(wells)+5 if x_max_lim is None else x_max_lim
+    x_max_lim = len(stations)+5 if x_max_lim is None else x_max_lim
     ax[0].set_xlim([x_min_lim, x_max_lim])
     
     if (y_min_date==None):

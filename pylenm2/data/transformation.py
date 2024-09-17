@@ -19,10 +19,10 @@ transformation_logger = logger_config.setup_logging(
 )
 
 
-def interpolate_well_data(
+def interpolate_station_data(
         # self, 
         data_pylenm_dm, 
-        well_name, 
+        station_name, 
         analytes, 
         frequency='2W',
     ) -> pd.DataFrame:
@@ -30,7 +30,7 @@ def interpolate_well_data(
 
     Args:
         data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
-        well_name (str): name of the well to be processed.
+        station_name (str): name of the station to be processed.
         analytes (list): list of analyte names to use
         frequency (str, optional): {‘D’, ‘W’, ‘M’, ‘Y’} frequency to interpolate. See https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html for valid frequency inputs. (e.g. ‘W’ = every week, ‘D ’= every day, ‘2W’ = every 2 weeks). Defaults to '2W'.
 
@@ -40,7 +40,7 @@ def interpolate_well_data(
     # data = self.data
     data = data_pylenm_dm.data
     inter_series = {}
-    query = data[data.STATION_ID == well_name]
+    query = data[data.STATION_ID == station_name]
     
     for analyte in analytes:
         series = query[query.ANALYTE_NAME == analyte]
@@ -65,18 +65,18 @@ def interpolate_well_data(
     return join
 
 
-def interpolate_wells_by_analyte(
+def interpolate_stations_by_analyte(
         data_pylenm_dm, 
         analyte, 
         frequency='2W', 
         rm_outliers=True, 
         z_threshold=3,
     ) -> pd.DataFrame:
-    """Resamples analyte data based on the frequency specified and interpolates the values in between. NaN values are replaced with the average value per well.
+    """Resamples analyte data based on the frequency specified and interpolates the values in between. NaN values are replaced with the average value per station.
 
     Args:
         data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
-        analyte (_type_): analyte name for interpolation of all present wells.
+        analyte (_type_): analyte name for interpolation of all present stations.
         frequency (str, optional): {‘D’, ‘W’, ‘M’, ‘Y’} frequency to interpolate. See https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html for valid frequency inputs. (e.g. ‘W’ = every week, ‘D ’= every day, ‘2W’ = every 2 weeks). Defaults to '2W'.
         rm_outliers (bool, optional): flag to remove outliers in the data. Defaults to True.
         z_threshold (int, optional): z_score threshold to eliminate outliers. Defaults to 3.
@@ -136,29 +136,29 @@ def _transform_time_series(
         Returns:
             pd.DataFrame: return sample dataframe for the analyte.
         """
-        # wells_analyte = np.unique(data[data.ANALYTE_NAME == analyte_name].STATION_ID)
+        # stations_analyte = np.unique(data[data.ANALYTE_NAME == analyte_name].STATION_ID)
 
         # # Create array of equally spaced dates
         # start_date = pd.Timestamp(data.COLLECTION_DATE.min())
         # end_date = pd.Timestamp(data.COLLECTION_DATE.max())
-        # date_delta = (end_date - start_date) + pd.Timedelta(days=1)    # to include the end date as well
+        # date_delta = (end_date - start_date) + pd.Timedelta(days=1)    # to include the end date as station
         # t = np.linspace(start_date.value, end_date.value, date_delta.days)
         # t = pd.to_datetime(t).date
         # # t = pd.Series(t)
         # # t = t.apply(lambda x: x.replace(minute=0, hour=0, second=0, microsecond=0, nanosecond=0))
 
         # condensed = data[data.ANALYTE_NAME == analyte_name].groupby(['STATION_ID','COLLECTION_DATE']).mean()    # NOTE: Breaks the code
-        # condensed = data[data.ANALYTE_NAME == analyte_name].groupby(['STATION_ID','COLLECTION_DATE'])['RESULT'].mean().to_frame('RESULT')     # NOTE: Works. Result must have (well, date) as index
+        # condensed = data[data.ANALYTE_NAME == analyte_name].groupby(['STATION_ID','COLLECTION_DATE'])['RESULT'].mean().to_frame('RESULT')     # NOTE: Works. Result must have (station, date) as index
         condensed = data[data.ANALYTE_NAME == analyte_name].groupby(['STATION_ID','COLLECTION_DATE'], as_index=False)['RESULT'].mean()  # NOTE: Much better approach.
 
         analyte_df_resample = condensed.pivot(columns="COLLECTION_DATE", index="STATION_ID", values="RESULT")
 
-        # analyte_df_resample = pd.DataFrame(index=wells_analyte, columns=t)
+        # analyte_df_resample = pd.DataFrame(index=stations_analyte, columns=t)
         analyte_df_resample.sort_index(inplace=True)
         
-        # for well in wells_analyte:    # NOTE: Performs pivot. Implemented more efficiently above.
-        #     for date in condensed.loc[well].index:
-        #         analyte_df_resample.at[well, pd.to_datetime(date).date()] = condensed.loc[well,date].RESULT
+        # for station in stations_analyte:    # NOTE: Performs pivot. Implemented more efficiently above.
+        #     for date in condensed.loc[station].index:
+        #         analyte_df_resample.at[station, pd.to_datetime(date).date()] = condensed.loc[station,date].RESULT
         
         analyte_df_resample = analyte_df_resample.astype('float').T
         analyte_df_resample = analyte_df_resample.interpolate(method='linear')
@@ -215,25 +215,25 @@ def _transform_time_series(
     
     start_index = pd.Series(cutoff_dates).max()
 
-    # Get list of shared wells amongst all the listed analytes
-    combined_well_list = []
+    # Get list of shared stations amongst all the listed analytes
+    combined_station_list = []
     for x in range(len(analytes)):
-        combined_well_list = combined_well_list + list(analyte_data[x].columns)
+        combined_station_list = combined_station_list + list(analyte_data[x].columns)
     
-    combined_count = pd.Series(combined_well_list).value_counts()
-    shared_wells = list(
+    combined_count = pd.Series(combined_station_list).value_counts()
+    shared_stations = list(
         combined_count[
-            list(pd.Series(combined_well_list).value_counts()==len(analytes))
+            list(pd.Series(combined_station_list).value_counts()==len(analytes))
         ].index
     )
 
     # Vectorize data
-    vectorized_df = pd.DataFrame(columns=analytes, index=shared_wells)
+    vectorized_df = pd.DataFrame(columns=analytes, index=shared_stations)
 
     for analyte, num in zip(analytes, range(len(analytes))):
-        for well in shared_wells:
-            analyte_data_full = analyte_data[num][well].fillna(analyte_data[num][well].mean())
-            vectorized_df.at[well, analyte] = analyte_data_full[start_index:].values
+        for station in shared_stations:
+            analyte_data_full = analyte_data[num][station].fillna(analyte_data[num][station].mean())
+            vectorized_df.at[station, analyte] = analyte_data_full[start_index:].values
 
     dates = ana_data_resample[start_index:].index
     
