@@ -1,16 +1,16 @@
 import unittest
 import pandas as pd
 import numpy as np
-from pylenm2.data.data_factory import PylenmDataFactory
+from pylenm2 import PylenmDataModule
 from pylenm2.utils import constants as c
 
-class TestPylenmDataFactory(unittest.TestCase):
+class TestPylenmDataModule(unittest.TestCase):
 
     # @classmethod
     # def setUpClass(cls):
     def setUp(self):
         # print(f"Running test: {self.__class__.__name__}.{self._testMethodName}")
-        self.pdf = PylenmDataFactory()
+        self.pdm = PylenmDataModule()
         
         self.dummy_data = pd.DataFrame({
             'STATION_ID': ['1', '2', '3'],
@@ -34,47 +34,47 @@ class TestPylenmDataFactory(unittest.TestCase):
     #     print(f"Running test: {self.__class__.__name__}.{self._testMethodName}")
 
     def test_init(self):
-        self.assertIsNone(self.pdf.data)
-        self.assertIsNone(self.pdf.construction_data)
-        # self.assertEqual(self.pdf.__jointData, [None, 0])
+        self.assertIsNone(self.pdm.data)
+        self.assertIsNone(self.pdm.construction_data)
+        # self.assertEqual(self.pdm.__jointData, [None, 0])
 
     # def test_has_columns(self):
     #     data = self.dummy_data
     #     required_cols = ['STATION_ID', 'ANALYTE_NAME']
-    #     print(f"[SAPLOGS] {self.pdf._has_columns(data, required_cols) = }")
-    #     self.assertTrue(self.pdf._has_columns(data, required_cols))
+    #     print(f"[SAPLOGS] {self.pdm._has_columns(data, required_cols) = }")
+    #     self.assertTrue(self.pdm._has_columns(data, required_cols))
 
     # def test_is_valid(self):
     #     data = self.dummy_data
     #     required_cols = ['STATION_ID', 'ANALYTE_NAME']
-    #     self.assertTrue(self.pdf._is_valid(data, required_cols))
+    #     self.assertTrue(self.pdm._is_valid(data, required_cols))
 
     def test_is_valid_data(self):
         data = self.dummy_data
-        self.assertTrue(self.pdf.is_valid_data(data))
+        self.assertTrue(self.pdm.is_valid_data(data))
 
     def test_is_valid_construction_data(self):
         construction_data = self.dummy_construction_data
-        self.assertTrue(self.pdf.is_valid_construction_data(construction_data))
+        self.assertTrue(self.pdm.is_valid_construction_data(construction_data))
 
-    def test_setData(self):
+    def test_set_data(self):
         data = self.dummy_data
-        self.pdf.setData(data)
-        self.assertIsNotNone(self.pdf.data)
-        self.assertIsInstance(self.pdf.unit_dictionary, dict)
+        self.pdm.set_data(data)
+        self.assertIsNotNone(self.pdm.data)
+        self.assertIsInstance(self.pdm.unit_dictionary, dict)
 
-    def test_setConstructionData(self):
+    def test_set_construction_data(self):
         construction_data = self.dummy_construction_data
-        self.pdf.setConstructionData(construction_data)
-        self.assertIsNotNone(self.pdf.construction_data)
+        self.pdm.set_construction_data(construction_data)
+        self.assertIsNotNone(self.pdm.construction_data)
 
     def test_get_unit(self):
         data = self.dummy_data
-        self.pdf.setData(data)
-        self.assertEqual(self.pdf.get_unit('A'), 'unit1')
+        self.pdm.set_data(data)
+        self.assertEqual(self.pdm.get_unit('A'), 'unit1')
 
     def test_is_set_jointData(self):
-        self.assertFalse(self.pdf.is_set_jointData(10))
+        self.assertFalse(self.pdm.is_set_jointData(10))
 
 
 if __name__ == '__main__':
