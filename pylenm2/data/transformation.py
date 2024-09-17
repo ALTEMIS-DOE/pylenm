@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-
+from tqdm import tqdm
 from typing import Tuple
 
 from pylenm2.data import fetchers
@@ -263,3 +263,85 @@ def add_dist_to_source(
         distances.append(metrics.dist([x1,y1],[x2,y2]))
     XX[col_name] = distances
     return XX
+
+
+## by K. Whiteaker, kwhit@alum.mit.edu
+def time_average_all_stations(
+        # self, 
+        data_pylenm_dm, 
+        analyte, 
+        period='1W', 
+        rm_outliers=True, 
+        std_thresh=2.2, 
+        lowess_frac=0.1,
+    ):
+    """Transforms all analyte data from exact measurements, at potentially 
+    different dates for each station, into periodic averaged data (ex. weekly 
+    averages) at the same dates for all stations.
+
+    Args:
+        data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
+        analyte (_type_): analyte name
+        period (str, optional): {‘D’, ‘W’, ‘M’, ‘Y’} time period over which to average. See https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html for valid frequency inputs. (e.g. ‘2W’ = every 2 weeks). Defaults to '1W'
+        rm_outliers (bool, optional): flag to remove outliers in the data via LOWESS fit. Defaults to True
+        std_thresh (int, optional): number of standard deviations in (observation - fit) outside of which is considered an outlier. Defaults to 2.2
+        lowess_frac (float, optional): fraction of total data points considered in local fits of LOWESS smoother. A smaller value captures more local behaviour, and may be required for large datasets. Defaults to 0.1
+
+    Returns:
+        pd.DataFrame: dataframe with columns = stations, rows = dates, and data representing the average for that station between each date
+    """
+    # import data and filter for the chosen analyte
+    data_concentration = data_pylenm_dm.data
+    data_concentration = data_concentration[data_concentration.ANALYTE_NAME == analyte]
+    data_construction = data_pylenm_dm.construction_data
+
+    # create reshaped_df with columns=all available stations and rows=all measurement dates, to iterate over when conducting periodic averaging
+    stations = np.unique(data_concentration[data_concentration.ANALYTE_NAME == analyte].STATION_ID)
+    times = pd.to_datetime(np.unique(data_concentration.COLLECTION_DATE))
+    reshaped_df = pd.DataFrame(index=times, columns=stations)
+    
+    # remove outliers from each station's data using remove_outlier_lowess(), and save the remaining data in reshaped_df
+    for station in stations:
+        data_in = data_concentration[data_concentration.STATION_ID == station].set_index('COLLECTION_DATE').RESULT
+        data_in.index = pd.to_datetime(data_in.index)
+        if rm_outliers:
+            data_xOutliers = preprocess.remove_outliers_lowess(
+                data_in, lowess_frac, std_thresh, 
+            )
+        else:
+            data_xOutliers = data_in
+        reshaped_df[station].loc[data_xOutliers.index] = data_xOutliers
+    
+    # find first and last measurement dates
+    date_start = pd.Timestamp(times.min())
+    date_end = pd.Timestamp(times.max())
+    # make an array of datetimes, 1 period (ex. 1 week) apart, that spanning from before the first measurement date to after the last measurement date
+    period_timesteps = pd.date_range(
+        min(times) - pd.Timedelta(period), 
+        max(times) + pd.Timedelta(period), 
+        freq=period
+    ).to_numpy()
+
+    # conduct periodic averaging: take periodic (ex. 1 week) averages of each station and save the result to averaged_df
+    averaged_df = pd.DataFrame(
+        index=period_timesteps, 
+        columns=stations, 
+        dtype=float,
+    )
+    
+    for period_step in tqdm(range(period_timesteps.size-1), desc="Timesteps", total=period_timesteps.size-1):  # for each period...
+        # if period_step%100==0:
+        #     print(period_step)  # print progress
+        period_step_bin = []
+        relevant_times = times[(times > period_timesteps[period_step]) & (times < period_timesteps[period_step+1])]
+        
+        for relevant_time in relevant_times:  # for each existing measurement that occurred within this period...
+            timestep_data = reshaped_df.loc[relevant_time]  # identify all data points at this timestep
+            period_step_bin.append(timestep_data)
+        
+        if len(period_step_bin)>0:  # if there are any measurements in this period
+            period_data = pd.concat(period_step_bin, axis=1)
+            period_station_avg = period_data.mean(axis=1, skipna=True)  # for each station, take the average over this period
+            averaged_df.loc[period_timesteps[period_step]] = period_station_avg
+    
+    return averaged_df

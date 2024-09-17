@@ -1,6 +1,8 @@
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 import scipy.stats as stats
+from statsmodels.nonparametric.smoothers_lowess import lowess
 
 from pylenm2.stats import metrics
 from pylenm2.stats import gp as stats_gp
@@ -94,6 +96,69 @@ def remove_outliers(
     # data[z > z_threshold] = np.nan
 
     return data
+
+
+## by K. Whiteaker 2024-08, kwhit@alum.mit.edu
+def remove_outliers_lowess(
+        # self, 
+        data, 
+        lowess_frac=0.1, 
+        std_thresh=2.2, 
+        return_difference=False,
+    ):
+    """Identifies outliers in time series data as deviations of std_thresh standard deviations from a LOWESS fit, then sets these outliers to np.nan
+
+    Args:
+        data (pd.Series, pd.DataFrame): data for the outliers to removed from. 
+            MUST BE indexed by datetime (ex. collection date). 
+            Can convert pylenm concentration dataframe (for one station and 
+            one analyte) into a valid input via 
+            dataframe.set_index('COLLECTION_DATE').RESULT. 
+            Expects a single column of data if pd.DataFrame.
+        lowess_frac (float, optional): fraction of total data points considered 
+            in local fits of LOWESS smoother. A smaller value captures more 
+            local behaviour, and may be required for large datasets. 
+            Defaults to 0.1.
+        std_thresh (int, optional): number of standard deviations in 
+            (observation - fit) outside of which is considered an outlier. 
+            Defaults to 2.2.
+        return_difference (bool, optional): if True, return a pd.Series 
+            containing the difference between data and lowess fit
+
+    Returns:
+        if return_difference:
+            pd.Series: input data with outliers set to np.nan
+            pd.Series: input data - lowess fit
+        else:
+            pd.Series: input data with outliers set to np.nan
+    """
+
+    # create a copy so the data isn't modified inplace
+    working_data = data.copy()
+    
+    # lowess() reads datetime as nanoseconds and has issues with large numbers & low frac, so need to scale down x-axis during fitting
+    scaleDown = 1e17
+    x_data = pd.to_datetime(working_data.index)
+    x_readable = x_data.astype(int).to_numpy()/scaleDown
+    data_lowess = lowess(
+        working_data, 
+        x_readable, 
+        frac=lowess_frac, 
+        return_sorted=False,
+    )
+
+    # identify outlier locations and mark them as nan
+    difference = working_data - data_lowess  # this is a pd.Series
+    thresh = std_thresh * np.std(difference)
+    difference_ignoreNaN = np.ma.array(difference, mask=np.isnan(difference)) # Use a mask to mark & ignore the NaNs as per https://stackoverflow.com/questions/37749900/how-to-disregard-the-nan-data-point-in-numpy-array-and-generate-the-normalized-d
+    outliers_iloc = np.where(np.abs(difference_ignoreNaN)>thresh)[0]
+    outliers = working_data.iloc[outliers_iloc]
+    working_data.iloc[outliers_iloc] = np.nan
+
+    if return_difference:
+        return working_data, difference
+    else:
+        return working_data
 
 
 # Helper fucntion for get_Best_Stations
