@@ -122,8 +122,6 @@ def getJointData(
     ) -> pd.DataFrame:
     """Creates a table filling the data from the concentration dataset for a given analyte list where the columns are multi-indexed as follows [analytes, station names] and the index is the date ranges secified by the lag.
 
-    TODO: Replace current progress implementation with tqdm.
-
     Args:
         data_pylenm_dm (pylenm2.PylenmDataModule): PylenmDataModule object containing the concentration and construction data.
         analytes (list): list of analyte names to use
