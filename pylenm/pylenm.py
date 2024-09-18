@@ -54,6 +54,14 @@ class PylenmDataFactory(object):
 
     # DATA VALIDATION     
     def __isValid_Data(self, data):
+        """Validates data for Pylenm usage.
+
+        Returns:
+            Tuple[bool, str]: Returns a tuple of length 2. 
+                First value is `True` if data is valid, `False` otherwise.
+                Second value is a string describing the validation result.
+        """
+
         if(str(type(data)).lower().find('dataframe') == -1):
             return (False, 'Make sure the data is a pandas DataFrame.\n')
         if(not self.__hasColumns_Data(data)):
@@ -1937,8 +1945,8 @@ class PylenmDataFactory(object):
             wells_dateRange.loc[wells_dateRange.shape[0]]=[wellName,minDate,maxDate]
 
         wells_dateRange["RANGE"] = wells_dateRange.END_DATE - wells_dateRange.START_DATE
-        wells_dateRange.RANGE = wells_dateRange.RANGE.astype('timedelta64[D]').astype('int')
-        wells_dateRange = wells_dateRange[wells_dateRange.RANGE>min_days]
+        # wells_dateRange.RANGE = wells_dateRange.RANGE.astype('timedelta64[D]').astype('int')
+        wells_dateRange = wells_dateRange[wells_dateRange.RANGE.dt.days>min_days]
         wells_dateRange.sort_values(by=["RANGE","END_DATE","START_DATE"], ascending = (False, False, True), inplace=True)
         wells_dateRange.reset_index(inplace=True)
         wells_dateRange.drop('index', axis=1, inplace=True)
