@@ -55,6 +55,12 @@ DOI: 10.1021/acs.est.1c07440
 
 
 # Demonstration notebooks
+These notebooks use the refactored version of the [`pylenm`](./pylenm/) package - [`pylenm2`](./pylenm2/).
+This refactored version reorganizes the functions into a more semantically separated modules.
+
+To use this version, import `pylenm2` instead of `pylenm` after installation.
+The function hirarchy is shown in [pylenm2 README](./pylenm2/README.md).
+
 [1 - Basics](./notebooks2/1\)%20pyLEnM%20-%20Basics.ipynb)<br>
 [2 - Unsupervised learning](./notebooks2/2\)%20pyLEnM%20-%20Unsupervised%20Learning.ipynb)<br>
 [3 – Water Table Estimation & Well Optimization](./notebooks2/3\)%20pyLEnM%20-%20Water%20Table%20Spatial%20Estimation%20&%20Well%20Optimization.ipynb)<br>
