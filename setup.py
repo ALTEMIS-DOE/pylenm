@@ -25,7 +25,7 @@ def version(path):
 
 
 setup(
-    name='pylenm2',
+    name='pylenm',
     version=version('pylenm2/version.py'),
     description='This package aims to provide machine learning (ML) functions for performing comprehensive soil and groundwater data analysis, and for supporting the establishment of effective long-term monitoring.',
     long_description=long_description,
