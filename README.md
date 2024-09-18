@@ -54,8 +54,20 @@ Environmental Science & Technology 2022 56 (9), 5973-5983
 DOI: 10.1021/acs.est.1c07440
 
 
+# Demonstration notebooks
+[1 - Basics](./notebooks2/1\)%20pyLEnM%20-%20Basics.ipynb)<br>
+[2 - Unsupervised learning](./notebooks2/2\)%20pyLEnM%20-%20Unsupervised%20Learning.ipynb)<br>
+[3 – Water Table Estimation & Well Optimization](./notebooks2/3\)%20pyLEnM%20-%20Water%20Table%20Spatial%20Estimation%20&%20Well%20Optimization.ipynb)<br>
+[4 – Tritium Spatial Estimation](./notebooks2/4\)%20pyLEnM%20-%20Tritium%20Spatial%20Estimation.ipynb)<br>
+[5 – Proxy Estimation (SC~Tritium)](./notebooks2/5\)%20pyLEnM%20-%20Proxy%20Estimation%20\(SC~Tritium\).ipynb)<br>
+[6 - LOWESS Outlier removal](./notebooks2/6\)%20LOWESS-based%20functions%20for%20outliers%20and%20plotting.ipynb)<br>
+[7 - Miscellaneous](./notebooks2/7\)%20pyLEnM%20-%20Miscellaneous%20Demos.ipynb)<br>
 
-# Demonstration notebooks:
+Sample data used for these notebooks is stored in the [data](./notebooks2/data/) directory.
+
+
+
+# Demonstration notebooks (Deprecated):
 [1 – Basics](https://colab.research.google.com/github/ALTEMIS-DOE/pylenm/blob/master/notebooks/1%29%20pyLEnM%20-%20Basics.ipynb)<br>
 [2 - Unsupervised learning](https://colab.research.google.com/github/ALTEMIS-DOE/pylenm/blob/master/notebooks/2%29%20pyLEnM%20-%20Unsupervised%20Learning.ipynb)<br>
 [3 – Water Table Estimation & Well Optimization](https://colab.research.google.com/github/ALTEMIS-DOE/pylenm/blob/master/notebooks/3%29%20pyLEnM%20-%20Water%20Table%20Spatial%20Estimation%20&%20Well%20Optimization.ipynb)<br>
@@ -76,3 +88,11 @@ Himanshu Upadhyay<br>
 Masudur Siddiquee<br>
 Savannah Sturla<br>
 Nivedita Patel<br>
+Kay Whiteaker<br>
+
+
+# Maintainers
+Satyarth Praveen<br>
+Zexuan Xu<br>
+Aurelien Meray<br>
+Haruko Wainwright<br>
