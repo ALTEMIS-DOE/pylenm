@@ -15,7 +15,7 @@ More information on the project can be found here: https://altemis.lbl.gov/ai-fo
 
 ## Installation
 
-### [Optional] Create a virtual environment where the package is installed.
+### [Optional] Create a virtual environment within which the package is installed.
 It is recommended to install the package and work in a virtual environment. </br>
 Read more [here](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) to learn how to install `conda`.
 ```
@@ -23,13 +23,20 @@ conda create --name pylenm_env python=3.8
 conda activate pylenm_env
 ```
 
-### Install directly from the PyPI package repository.
+Working with Anaconda, you might need to install `jupyter` for Anaconda to identify this env as a jupyter environemnt.
+```
+pip install jupyter
+```
+
+### Installing the `pylenm` package
+
+#### [Option 1] Install directly from the PyPI package repository.
 Install directly using `pip` as mentioned on the [PyPI page](https://pypi.org/project/pylenm/).
 ```
 pip install pylenm
 ```
 
-### Install from the source code
+#### [Option 2] Install from the source code
 1. **Clone the repository**
     ```
     git clone https://github.com/ALTEMIS-DOE/pylenm.git
