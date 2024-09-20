@@ -52,7 +52,8 @@ setup(
         'scikit-learn>=0.24.1',
         'supersmoother',
         'ipyleaflet>=0.13.0',
-        'ipywidgets>=7.5.0'
+        'ipywidgets>=7.5.0',
+        'jupyter',
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
