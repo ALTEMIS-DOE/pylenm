@@ -62,21 +62,21 @@ DOI: 10.1021/acs.est.1c07440
 
 
 # Demonstration notebooks
-These notebooks use the refactored version of the [`pylenm`](./pylenm/) package - [`pylenm2`](./pylenm2/).
+These notebooks use the refactored version of the [`pylenm`](https://github.com/ALTEMIS-DOE/pylenm/tree/satyarth/pylenm) package - [`pylenm2`](https://github.com/ALTEMIS-DOE/pylenm/tree/satyarth/pylenm2).
 This refactored version reorganizes the functions into a more semantically separated modules.
 
 To use this version, import `pylenm2` instead of `pylenm` after installation.
-The function hirarchy is shown in [pylenm2 README](./pylenm2/README.md).
+The function hirarchy is shown in [pylenm2 README](https://github.com/ALTEMIS-DOE/pylenm/blob/satyarth/pylenm2/README.md).
 
-[1 - Basics](./notebooks2/1\)%20pyLEnM%20-%20Basics.ipynb)<br>
-[2 - Unsupervised learning](./notebooks2/2\)%20pyLEnM%20-%20Unsupervised%20Learning.ipynb)<br>
-[3 – Water Table Estimation & Well Optimization](./notebooks2/3\)%20pyLEnM%20-%20Water%20Table%20Spatial%20Estimation%20&%20Well%20Optimization.ipynb)<br>
-[4 – Tritium Spatial Estimation](./notebooks2/4\)%20pyLEnM%20-%20Tritium%20Spatial%20Estimation.ipynb)<br>
-[5 – Proxy Estimation (SC~Tritium)](./notebooks2/5\)%20pyLEnM%20-%20Proxy%20Estimation%20\(SC~Tritium\).ipynb)<br>
-[6 - LOWESS Outlier removal](./notebooks2/6\)%20LOWESS-based%20functions%20for%20outliers%20and%20plotting.ipynb)<br>
-[7 - Miscellaneous](./notebooks2/7\)%20pyLEnM%20-%20Miscellaneous%20Demos.ipynb)<br>
+[1 - Basics](https://colab.research.google.com/github/ALTEMIS-DOE/pylenm/blob/satyarth/notebooks2/1%29%20pyLEnM%20-%20Basics.ipynb)<br>
+[2 - Unsupervised learning](https://colab.research.google.com/github/ALTEMIS-DOE/pylenm/blob/satyarth/notebooks2/2%29%20pyLEnM%20-%20Unsupervised%20Learning.ipynb)<br>
+[3 – Water Table Estimation & Well Optimization](https://colab.research.google.com/github/ALTEMIS-DOE/pylenm/blob/satyarth/notebooks2/3%29%20pyLEnM%20-%20Water%20Table%20Spatial%20Estimation%20%26%20Well%20Optimization.ipynb)<br>
+[4 – Tritium Spatial Estimation](https://colab.research.google.com/github/ALTEMIS-DOE/pylenm/blob/satyarth/notebooks2/4%29%20pyLEnM%20-%20Tritium%20Spatial%20Estimation.ipynb)<br>
+[5 – Proxy Estimation (SC~Tritium)](https://colab.research.google.com/github/ALTEMIS-DOE/pylenm/blob/satyarth/notebooks2/5%29%20pyLEnM%20-%20Proxy%20Estimation%20(SC~Tritium).ipynb)<br>
+[6 - LOWESS Outlier removal](https://colab.research.google.com/github/ALTEMIS-DOE/pylenm/blob/satyarth/notebooks2/6%29%20LOWESS-based%20functions%20for%20outliers%20and%20plotting.ipynb)<br>
+[7 - Miscellaneous](https://colab.research.google.com/github/ALTEMIS-DOE/pylenm/blob/satyarth/notebooks2/7%29%20pyLEnM%20-%20Miscellaneous%20Demos.ipynb)<br>
 
-Sample data used for these notebooks is stored in the [data](./notebooks2/data/) directory.
+Sample data used for these notebooks is stored in the [data](https://github.com/ALTEMIS-DOE/pylenm/tree/satyarth/notebooks2/data) directory.
 
 
 

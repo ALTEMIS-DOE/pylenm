@@ -5,7 +5,7 @@ This version organizes the code in a more semantic way.
 
 
 ### Demo
-The demo notebooks are shown in the [notebooks2](../notebooks2/) directory.
+The demo notebooks are shown in the [notebooks2](https://github.com/ALTEMIS-DOE/pylenm/tree/satyarth/notebooks2) directory.
 
 ### Organization hirarchy of package is shown below:
 
