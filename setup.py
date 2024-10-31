@@ -30,7 +30,8 @@ setup(
     description='This package aims to provide machine learning (ML) functions for performing comprehensive soil and groundwater data analysis, and for supporting the establishment of effective long-term monitoring.',
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url='https://github.com/ALTEMIS-DOE/pylenm',
+    # url='https://github.com/ALTEMIS-DOE/pylenm',
+    url='https://github.com/ALTEMIS-DOE/pylenm/tree/satyarth',
     author='Aurelien Meray',
     author_email='aurelien.meray@gmail.com',
     license='MIT',
@@ -64,6 +65,7 @@ setup(
     project_urls={
         "Bug Tracker": "https://github.com/ALTEMIS-DOE/pylenm/issues",
         "Documentation": "https://pylenm.readthedocs.io/",
-        "Source": "https://github.com/ALTEMIS-DOE/pylenm",
+        # "Source": "https://github.com/ALTEMIS-DOE/pylenm",
+        "Source": "https://github.com/ALTEMIS-DOE/pylenm/tree/satyarth",
     },
 )
