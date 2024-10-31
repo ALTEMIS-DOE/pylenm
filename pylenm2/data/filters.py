@@ -14,7 +14,7 @@ from pylenm2 import logger_config
 filters_logger = logger_config.setup_logging(
     module_name=__name__,
     # level=logging.INFO,
-    level=logging.DEBUG,
+    level=logging.ERROR,
     logfile_dir=c.LOGFILE_DIR,
 )
 
@@ -55,24 +55,46 @@ def simplify_data(
         filters_logger.error("`data` must be either a pandas DataFrame or PylenmDataModule!")
         # raise ValueError("`data` must be either a pandas DataFrame or PylenmDataModule!")
         return None
-        
+    
+    required_data_cols = c.REQUIRED_DATA_COLUMNS + ["COLLECTION_TIME"]
     if columns==None:
         # sel_cols = ['COLLECTION_DATE','STATION_ID','ANALYTE_NAME','RESULT','RESULT_UNITS']
-        sel_cols = c.REQUIRED_DATA_COLUMNS
+        # sel_cols = c.REQUIRED_DATA_COLUMNS
+        sel_cols = required_data_cols
     else:
         # hasColumns = all(item in list(data.columns) for item in columns)
         # if(hasColumns):
 
         if set(columns).issubset(data_df.columns):
             # sel_cols = ['COLLECTION_DATE','STATION_ID','ANALYTE_NAME','RESULT','RESULT_UNITS'] + columns
-            sel_cols = c.REQUIRED_DATA_COLUMNS + columns
+            # sel_cols = c.REQUIRED_DATA_COLUMNS + columns
+            sel_cols = required_data_cols + columns
         else:
             extra_columns = set(columns).difference(data_df.columns)
             filters_logger.error(f'Following specified column(s) do not exist in the data: {extra_columns}')
             raise ValueError("Specified column(s) do not exist in the data!")
 
     data_df = data_df[sel_cols]
-    data_df.COLLECTION_DATE = pd.to_datetime(data_df.COLLECTION_DATE, format=c.COLLECTION_DATE_FORMAT)
+
+    # # Formating the date to Datetime
+    # # data_df.COLLECTION_DATE = pd.to_datetime(data_df.COLLECTION_DATE, format=c.COLLECTION_DATE_FORMAT)
+    # try:
+    #     # For when time is specified in the HH:MM format
+    #     data_df.COLLECTION_DATE = pd.to_datetime(
+    #         data_df.COLLECTION_DATE, 
+    #         format=f"{c.COLLECTION_DATE_FORMAT} {c.COLLECTION_TIME_FORMAT}",
+    #     )
+    # except ValueError as ve:
+    #     filters_logger.warning(f"COLLECTION_DATE data does not match the specified '{c.COLLECTION_DATE_FORMAT} {c.COLLECTION_TIME_FORMAT}' format. Checking '{c.COLLECTION_DATE_FORMAT}' format now.")
+        
+    #     data_df.COLLECTION_DATE = pd.to_datetime(
+    #         data_df.COLLECTION_DATE, 
+    #         format=c.COLLECTION_DATE_FORMAT,
+    #     )
+    
+    # # Creating a new column for COLLECTION_TIME
+    # data_df["COLLECTION_TIME"] = data_df.COLLECTION_DATE.dt.strftime(c.COLLECTION_TIME_FORMAT)
+
     data_df = data_df.sort_values(by="COLLECTION_DATE")
     dup = data_df[data_df.duplicated(['COLLECTION_DATE', 'STATION_ID','ANALYTE_NAME', 'RESULT'])]
     data_df = data_df.drop(dup.index)
@@ -149,7 +171,7 @@ def filter_by_column(data, col, equals=[]):
     #         return 'ERROR: No value equal to "{}" in "{}".'.format(value, col)
     values_not_in_data = set(equals).difference(set(data[col]))
     if len(values_not_in_data) > 0:
-        filters_logger.error(f'ERROR: {values_not_in_data} do not exist in {col}.')
+        filters_logger.warning(f'WARNING: {values_not_in_data} do not exist in {col}.')
         # return f'ERROR: {values_not_in_data} do not exist in {col}.'
         return None
 
@@ -176,7 +198,7 @@ def filter_stations(data_pylenm_dm, units):
     data = data_pylenm_dm.data
     
     if units==None:
-        units= ['A', 'B', 'C', 'D']
+        units = ['A', 'B', 'C', 'D']
     elif not isinstance(units, (list, tuple)):
         units = [units]
     

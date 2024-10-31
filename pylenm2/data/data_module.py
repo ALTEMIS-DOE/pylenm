@@ -23,6 +23,7 @@ class PylenmDataModule(object):
         self, 
         data: pd.DataFrame=None,
         construction_data: pd.DataFrame=None,
+        verbose=True,
         logger_level:int=logging.WARNING,
     ) -> None:
         """Initializes pylenm with a Pandas DataFrame
@@ -34,12 +35,12 @@ class PylenmDataModule(object):
         self.logger = logger_config.setup_logging(module_name=__name__, level=logger_level)
 
         if data is not None: 
-            self.set_data(data, verbose=True)
+            self.set_data(data, verbose=verbose)
         else:
             self.data = None
         
         if construction_data is not None:
-            self.set_construction_data(construction_data, verbose=True)
+            self.set_construction_data(construction_data, verbose=verbose)
         else:
             self.construction_data = None
         
@@ -129,6 +130,10 @@ class PylenmDataModule(object):
             cols_upper = [x.upper() for x in data.columns]
             data.columns = cols_upper
             self.data = data
+            
+            if "COLLECTION_DATE" in self.data.columns:
+                self.update_collection_date_and_time()
+            
             self.logger.info("Successfully imported the data!")
             
             if(verbose):
@@ -205,3 +210,12 @@ class PylenmDataModule(object):
 
     def get_construction_data(self):
         return self.construction_data
+
+
+    def update_collection_date_and_time(self):
+        # Formating the date to Datetime
+        is_dayfirst = c.COLLECTION_DATE_FORMAT.startswith("%d")
+        self.data.COLLECTION_DATE = pd.to_datetime(self.data.COLLECTION_DATE,  format="mixed", dayfirst=is_dayfirst)
+        
+        # Creating a new column for COLLECTION_TIME
+        self.data["COLLECTION_TIME"] = self.data.COLLECTION_DATE.dt.strftime(c.COLLECTION_TIME_FORMAT)

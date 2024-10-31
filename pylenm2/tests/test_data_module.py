@@ -1,3 +1,4 @@
+import re
 import unittest
 import pandas as pd
 import numpy as np
@@ -17,7 +18,7 @@ class TestPylenmDataModule(unittest.TestCase):
             'ANALYTE_NAME': ['A', 'B', 'C'],
             'RESULT': ["result1", "result2", "result3"],
             'RESULT_UNITS': ['unit1', 'unit2', 'unit3'],
-            'COLLECTION_DATE': ['coll_date1', 'coll_date2', 'coll_date3'],
+            'COLLECTION_DATE': ['9/24/15', '1/8/15 10:23', '5/18/15 3:5'],
         })
 
         self.dummy_construction_data = pd.DataFrame({
@@ -75,6 +76,25 @@ class TestPylenmDataModule(unittest.TestCase):
 
     def test_is_set_jointData(self):
         self.assertFalse(self.pdm.is_set_jointData(10))
+    
+    def test_update_collection_date_and_time(self):
+        data = self.dummy_data
+        self.pdm.set_data(data)
+        self.pdm.update_collection_date_and_time()
+        self.assertIsInstance(
+            self.pdm.data['COLLECTION_DATE'].iloc[0], 
+            pd.Timestamp,
+        )
+
+    def test_add_collection_time(self):
+        data = self.dummy_data
+        self.pdm.set_data(data)
+        self.pdm.update_collection_date_and_time()
+
+        time_pattern = "^([01][0-9]|2[0-3]):([0-5][0-9])$"
+        self.assertIsNotNone(
+            re.match(time_pattern, self.pdm.data['COLLECTION_TIME'].iloc[0])
+        )
 
 
 if __name__ == '__main__':
