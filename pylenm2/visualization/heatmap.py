@@ -14,8 +14,8 @@ from pylenm2 import logger_config
 
 heatmap_logger = logger_config.setup_logging(
     module_name=__name__,
-    # level=logging.INFO,
-    level=logging.DEBUG,
+    level=logging.INFO,
+    # level=logging.DEBUG,
     logfile_dir=c.LOGFILE_DIR,
 )
 
@@ -66,7 +66,7 @@ def plot_correlation_heatmap(
     samples = piv.shape[0]
     
     if(samples < 5):
-        heatmap_logger.error(f"ERROR: {station_name} does not have enough samples to plot.")
+        heatmap_logger.debug(f"ERROR: {station_name} does not have enough samples to plot.")
         return None
     
     else:

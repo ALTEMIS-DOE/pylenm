@@ -15,8 +15,8 @@ from pylenm2 import logger_config
 
 plot_pca_logger = logger_config.setup_logging(
     module_name=__name__,
-    # level=logging.INFO,
-    level=logging.DEBUG,
+    level=logging.INFO,
+    # level=logging.DEBUG,
     logfile_dir=c.LOGFILE_DIR,
 )
 
@@ -98,8 +98,8 @@ def plot_PCA_by_date(
         query = query.loc[query.ANALYTE_NAME.isin(analytes)]
 
         if query.shape[0] == 0:
-            plot_pca_logger.error(f"ERROR: {date} has no data for the 6 analytes.")
-            # return 'ERROR: {} has no data for the 6 analytes.'.format(date)
+            plot_pca_logger.error(f"ERROR: {date} has no data for the {len(analytes)} analytes.")
+            # return 'ERROR: {} has no data for the {len(analytes)} analytes.'.format(date)
             return None
         
         samples = query[['COLLECTION_DATE', 'STATION_ID', 'ANALYTE_NAME']].duplicated().value_counts()[0]
@@ -111,7 +111,7 @@ def plot_PCA_by_date(
             return None
 
         # if(len(np.unique(query.ANALYTE_NAME.values)) < 6):
-        #     return 'ERROR: {} has less than the 6 analytes we want to analyze.'.format(date)
+        #     return 'ERROR: {} has less than the {len(analytes)} analytes we want to analyze.'.format(date)
         else:
             # analytes = preprocess._custom_analyte_sort(np.unique(query.ANALYTE_NAME.values))
             analytes = sorted(analytes)
@@ -395,8 +395,8 @@ def plot_PCA_by_year(
     query = query.loc[query.ANALYTE_NAME.isin(analytes)]
 
     if(query.shape[0] == 0):
-        plot_pca_logger.error(f"ERROR: {year} has no data for the 6 analytes.")
-        # return 'ERROR: {} has no data for the 6 analytes.'.format(year)
+        plot_pca_logger.error(f"ERROR: {year} has no data for the {len(analytes)} analytes.")
+        # return 'ERROR: {} has no data for the {len(analytes)} analytes.'.format(year)
         return None
     
     samples = query[['COLLECTION_DATE', 'STATION_ID', 'ANALYTE_NAME']].duplicated().value_counts()[0]
@@ -407,7 +407,7 @@ def plot_PCA_by_year(
         return None
 
     # if(len(np.unique(query.ANALYTE_NAME.values)) < 6):
-    #     return 'ERROR: {} has less than the 6 analytes we want to analyze.'.format(year)
+    #     return 'ERROR: {} has less than the {len(analytes)} analytes we want to analyze.'.format(year)
     else:
         # analytes = preprocess._custom_analyte_sort(np.unique(query.ANALYTE_NAME.values))
         analytes = sorted(analytes)
@@ -650,18 +650,18 @@ def plot_PCA_by_station(
         title = f"PCA Biplot - {station_name}"
 
     if query.shape[0] == 0:
-        plot_pca_logger.error(f"ERROR: {date} has no data for the 6 analytes.")
-        # return 'ERROR: {} has no data for the 6 analytes.'.format(date)
+        plot_pca_logger.error(f"ERROR: Station {station_name} has no data for the {len(analytes)} analytes.")
+        # return 'ERROR: {} has no data for the {len(analytes)} analytes.'.format(date)
         return None
     
     samples = query[['COLLECTION_DATE', 'STATION_ID', 'ANALYTE_NAME']].duplicated().value_counts()[0]
     if samples < min_samples:
-        plot_pca_logger.error(f"ERROR: {date} does not have at least {min_samples} samples.")
+        plot_pca_logger.error(f"ERROR: Station {station_name} does not have at least {min_samples} samples.")
         # return 'ERROR: {} does not have at least {} samples.'.format(date, min_samples)
         return None
     
     # if(len(np.unique(query.ANALYTE_NAME.values)) < 6):
-    #     return 'ERROR: {} has less than the 6 analytes we want to analyze.'.format(station_name)
+    #     return 'ERROR: {} has less than the {len(analytes)} analytes we want to analyze.'.format(station_name)
     else:
         
         # Scale the values

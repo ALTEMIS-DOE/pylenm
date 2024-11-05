@@ -15,8 +15,8 @@ from pylenm2 import logger_config
 
 timeseries_logger = logger_config.setup_logging(
     module_name=__name__,
-    # level=logging.INFO,
-    level=logging.DEBUG,
+    level=logging.INFO,
+    # level=logging.DEBUG,
     logfile_dir=c.LOGFILE_DIR,
 )
 
@@ -71,16 +71,18 @@ def plot_all_time_series_simple(
             col=col, 
             equals=equals,
         )
-        if('ERROR:' in str(filter_res)):
-            timeseries_logger.error("Ran into ERROR when calling filter_by_column()!")
+        # if('ERROR:' in str(filter_res)):
+        if filter_res is None:
+            timeseries_logger.debug("Ran into ERROR when calling filter_by_column()!")
             return filter_res
         
         query_stations = list(data.STATION_ID.unique())
         filter_stations = list(filter_res.index.unique())
         intersect_stations = list(set(query_stations) & set(filter_stations))
         if(len(intersect_stations)<=0):
-            timeseries_logger.error('ERROR: No results for this query with the specifed filter parameters.')
-            return 'ERROR: No results for this query with the specifed filter parameters.'
+            timeseries_logger.warning('ERROR: No results for this query with the specified filter parameters.')
+            # return 'ERROR: No results for this query with the specifed filter parameters.'
+            return None
         
         data = data[data['STATION_ID'].isin(intersect_stations)]
 
@@ -223,16 +225,19 @@ def plot_all_time_series(
             col=col, 
             equals=equals,
         )
-        if('ERROR:' in str(filter_res)):
-            timeseries_logger.error("Ran into ERROR when calling filter_by_column()!")
+        # if('ERROR:' in str(filter_res)):
+        if filter_res is None:
+            timeseries_logger.debug("Ran into ERROR when calling filter_by_column()!")
             return filter_res
         
         query_stations = list(dt.columns.unique())
         filter_stations = list(filter_res.index.unique())
         intersect_stations = list(set(query_stations) & set(filter_stations) & set(dt.columns))
         if(len(intersect_stations)<=0):
-            timeseries_logger.error('ERROR: No results for this query with the specifed filter parameters.')
-            return 'ERROR: No results for this query with the specifed filter parameters.'
+            timeseries_logger.warning('ERROR: No results for this query with the specifed filter parameters.')
+            # return 'ERROR: No results for this query with the specifed filter parameters.'
+            return None
+
         dt = dt[intersect_stations]
 
     # Get station information

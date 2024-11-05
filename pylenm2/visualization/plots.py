@@ -22,8 +22,8 @@ from pylenm2 import logger_config
 
 plots_logger = logger_config.setup_logging(
     module_name=__name__,
-    # level=logging.INFO,
-    level=logging.DEBUG,
+    level=logging.INFO,
+    # level=logging.DEBUG,
     logfile_dir=c.LOGFILE_DIR,
 )
 
@@ -111,12 +111,16 @@ def plot_data(
         analyte_name=analyte_name,
     )       # TODO: Handle better for empty values.
 
+    if query_raw is None:
+        plots_logger.debug(f"No results found for {station_name} and {analyte_name}")
+        return None
+    
     query = filters.simplify_data(data=query_raw)
     
     # Check if the query returned any results
     # if(type(query)==int and query == 0):
     if query is None:
-        plots_logger.error(f"No results found for {station_name} and {analyte_name}")
+        plots_logger.debug(f"No results found for {station_name} and {analyte_name}")
         return None
     
     else:
@@ -128,8 +132,9 @@ def plot_data(
                 equals=equals,
             )
             
-            if('ERROR:' in str(filter_res)):
-                plots_logger.error("Ran into ERROR when calling filter_by_column()!")
+            # if('ERROR:' in str(filter_res)):
+            if filter_res is None:
+                plots_logger.debug("Ran into ERROR when calling filter_by_column()!")
                 return filter_res
 
             # Get the intersection of the query stations and filter stations
@@ -137,8 +142,9 @@ def plot_data(
             filter_stations = list(filter_res.index.unique())
             intersect_stations = list(set(query_stations) & set(filter_stations))
             if(len(intersect_stations)<=0):
-                plots_logger.error('ERROR: No results for this query with the specifed filter parameters.')
-                return 'ERROR: No results for this query with the specifed filter parameters.'
+                plots_logger.debug('ERROR: No results for this query with the specifed filter parameters.')
+                # return 'ERROR: No results for this query with the specifed filter parameters.'
+                return None
             query = query[query['STATION_ID'].isin(intersect_stations)]
         
         # Extract the date and result values from the query data
@@ -161,7 +167,7 @@ def plot_data(
             y_pred = model.predict(x_RR)
         
         except Exception as e:
-            plots_logger.error(e)
+            plots_logger.debug(e)
             return None
 
         r = model.cv_residuals()
@@ -729,7 +735,7 @@ def plot_data_rollAvg(
     # if(type(query)==int and query == 0):
     if query is None:
         # return 'No results found for {} and {}'.format(station_name, analyte_name)
-        plots_logger.error(f"No results found for {station_name} and {analyte_name}.")
+        plots_logger.debug(f"No results found for {station_name} and {analyte_name}.")
         return None
     
     # reshape data so it can be passed into lowess() and remove_outliers_lowess()
@@ -888,7 +894,7 @@ def plot_data_lowess(
     # if(type(query)==int and query == 0):
     if query is None:
         # return 'No results found for {} and {}'.format(station_name, analyte_name)
-        plots_logger.error(f"No results found for {station_name} and {analyte_name}.")
+        plots_logger.debug(f"No results found for {station_name} and {analyte_name}.")
         return None
     
     # reshape data so it can be passed into lowess() and remove_outliers_lowess()

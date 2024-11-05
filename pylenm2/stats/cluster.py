@@ -12,8 +12,8 @@ from pylenm2 import logger_config
 
 cluster_logger = logger_config.setup_logging(
     module_name=__name__,
-    # level=logging.INFO,
-    level=logging.DEBUG,
+    level=logging.INFO,
+    # level=logging.DEBUG,
     logfile_dir=c.LOGFILE_DIR,
 )
 

@@ -13,8 +13,8 @@ from pylenm2 import logger_config
 
 preprocess_logger = logger_config.setup_logging(
     module_name=__name__,
-    # level=logging.INFO,
-    level=logging.DEBUG,
+    level=logging.INFO,
+    # level=logging.DEBUG,
     logfile_dir=c.LOGFILE_DIR,
 )
 
@@ -203,14 +203,31 @@ def _get_Best_Station(
         if(verbose): 
             print("Selecting first station")
         for ix in leftover:
-            y_pred, r_map, residuals, lr_trend = stats_gp.interpolate_topo(X=X.iloc[ix:ix+1,:], y=y[ix:ix+1], xx=xx, ft=ft, regression=regression, model=model, smooth=smooth)
-            y_err = stats_gp.mse(ref, y_pred)
+            y_pred, r_map, residuals, lr_trend = stats_gp.interpolate_topo(
+                X=X.iloc[ix:ix+1,:], 
+                y=y[ix:ix+1], 
+                xx=xx, 
+                ft=ft, 
+                regression=regression, 
+                model=model, 
+                smooth=smooth,
+            )
+            # y_err = stats_gp.mse(ref, y_pred)
+            y_err = metrics.mse(ref, y_pred)
             errors.append((ix, y_err))
     
     if num_selected > 0:
         for ix in leftover:
             joined = selected + [ix]
-            y_pred, r_map, residuals, lr_trend = stats_gp.interpolate_topo(X=X.iloc[joined,:], y=y[joined], xx=xx, ft=ft, regression=regression, model=model, smooth=smooth)
+            y_pred, r_map, residuals, lr_trend = stats_gp.interpolate_topo(
+                X=X.iloc[joined,:], 
+                y=y[joined], 
+                xx=xx, 
+                ft=ft, 
+                regression=regression, 
+                model=model, 
+                smooth=smooth,
+            )
             y_err = metrics.mse(ref, y_pred)
             errors.append((ix, y_err))
         
